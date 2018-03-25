@@ -1,5 +1,28 @@
 #!/usr/bin/python
 
+# The Laser Nanny project is hosted here:
+# https://github.com/Workshop88/laser_nanny/blob/master/ws88_laser_nanny.py
+#
+# It is a Python program running on a Raspberry Pi 3 which monitors the laser 
+# cutter temperatures, opens laser cutter exaust blast gate and tracks laser 
+# cutter usage.
+#
+# This Python programs uses CharLCD to control Laser Nanny's 160 character 
+# LCD.  CharLCD is hosted here & can be downloaded here:
+# https://pypi.python.org/pypi/CharLCD
+#
+# It also uses GPIO for the Raspberry Pi and w1thermsensor.
+# w1thermsensor is hosted here:
+# https://github.com/timofurrer/w1thermsensor
+# ...and can be installed using this command:
+# pip install w1thermsensor
+# gpio is hosted here:
+# https://pypi.python.org/pypi/RPi.GPIO
+# ...and can be installed using this command:
+# sudo pip install RPi.GPIO
+
+
+
 import sys
 
 import RPi.GPIO as GPIO #pylint: disable=I0011,F0401
@@ -79,15 +102,22 @@ def main():
 #    print 'Sensor 02 ID:{0}'.format(sensor02_id)
 
     while True:
-        for x in range (0,100):
-            if key_press == True:
-                key_press = False
-                string_to_lcd = str(key_value)
-                lcd_1.write(string_to_lcd, 23, 3)
+        if key_press == True:
+            key_press = False
+            string_to_lcd = str(key_value)
+            lcd_1.write(string_to_lcd, 23, 3)
         temperature_in_fahrenheit = sensor_list[0].get_temperature(W1ThermSensor.DEGREES_F)
+        if key_press == True:
+            key_press = False
+            string_to_lcd = str(key_value)
+            lcd_1.write(string_to_lcd, 23, 3)
         string_to_lcd = str(temperature_in_fahrenheit)
         lcd_1.write(string_to_lcd, 20, 1)
         temperature_in_fahrenheit = sensor_list[1].get_temperature(W1ThermSensor.DEGREES_F)
+        if key_press == True:
+            key_press = False
+            string_to_lcd = str(key_value)
+            lcd_1.write(string_to_lcd, 23, 3)
         string_to_lcd = str(temperature_in_fahrenheit)
         lcd_1.write(string_to_lcd, 20, 2)
 
