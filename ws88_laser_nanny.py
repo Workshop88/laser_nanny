@@ -27,13 +27,15 @@ import sys
 
 import RPi.GPIO as GPIO #pylint: disable=I0011,F0401
 
+import datetime;
+
 from time import sleep
 from w1thermsensor import W1ThermSensor
 sensor = W1ThermSensor()
 
 
 from charlcd.drivers.gpio import Gpio
-from charlcd import lcd_direct as lcd
+from charlcd import lcd_buffered as lcd
 from charlcd.drivers.i2c import I2C #pylint: disable=I0011,F0401
 
 GPIO.setmode(GPIO.BCM)
@@ -69,6 +71,14 @@ def printKey(key):
 # printKey will be called each time a keypad button is pressed
 keypad.registerKeyPressHandler(printKey)
 
+def key_press_check():
+    global key_press
+    if key_press == True:
+        key_press = False
+        string_to_lcd = str(key_value)
+        lcd_1.set_xy(15, 3)
+        lcd_1.stream(string_to_lcd)
+
 def main():
     global key_value
     global key_press
@@ -85,13 +95,21 @@ def main():
     }
     lcd_1 = lcd.CharLCD(40, 4, drv, 0, 0)
     lcd_1.init()
-    lcd_1.write('WorkShop88 LaserCutter Monitor V1.0', 0, 0)
-    lcd_1.write('Duct Temperature:', 0, 1)
-    lcd_1.write('Cutter Temperature:', 0, 2)
-    lcd_1.write('Blastgate:', 0, 3)
-    lcd_1.write('--.-', 20, 1)
-    lcd_1.write('--.-', 20, 2)
-    lcd_1.write('-----', 20, 3)
+    lcd_1.set_xy(0,0)
+    lcd_1.stream('WorkShop88 LaserCutter Monitor V1.0')
+    lcd_1.set_xy(0,1)
+    lcd_1.write('Duct Temperature:')
+    lcd_1.set_xy(0,2)
+    lcd_1.write('Cutter Temperature:')
+    lcd_1.set_xy(0,3)
+    lcd_1.write('Blastgate:')
+    lcd_1.set_xy(20,1)
+    lcd_1.write('--.-')
+    lcd_1.set_xy(20,2)
+    lcd_1.write('--.-')
+    lcd_1.set_xy(12,3)
+    lcd_1.write('-----')
+    lcd_1.flush()
 
     # Identify sensors and remember their purposes.
     sensor_list = W1ThermSensor.get_available_sensors();
@@ -102,24 +120,23 @@ def main():
 #    print 'Sensor 02 ID:{0}'.format(sensor02_id)
 
     while True:
-        if key_press == True:
-            key_press = False
-            string_to_lcd = str(key_value)
-            lcd_1.write(string_to_lcd, 23, 3)
         temperature_in_fahrenheit = sensor_list[0].get_temperature(W1ThermSensor.DEGREES_F)
-        if key_press == True:
-            key_press = False
-            string_to_lcd = str(key_value)
-            lcd_1.write(string_to_lcd, 23, 3)
+        print(datetime.datetime.now().time().strftime('%H:%M:%S'))
+        lcd_1.set_xy(20, 3)
+        lcd_1.stream(datetime.datetime.now().time().strftime('%H:%M:%s'))
+        key_press_check()
         string_to_lcd = str(temperature_in_fahrenheit)
-        lcd_1.write(string_to_lcd, 20, 1)
+        lcd_1.set_xy(20, 1)
+        lcd_1.stream(string_to_lcd)
         temperature_in_fahrenheit = sensor_list[1].get_temperature(W1ThermSensor.DEGREES_F)
-        if key_press == True:
-            key_press = False
-            string_to_lcd = str(key_value)
-            lcd_1.write(string_to_lcd, 23, 3)
+        print(datetime.datetime.now().time().strftime('%H:%M:%S'))
+        lcd_1.set_xy(20, 3)
+        lcd_1.stream(datetime.datetime.now().time().strftime('%H:%M:%s'))
+        key_press_check()
         string_to_lcd = str(temperature_in_fahrenheit)
-        lcd_1.write(string_to_lcd, 20, 2)
+        lcd_1.set_xy(20, 2)
+        lcd_1.stream(string_to_lcd)
+        lcd_1.flush()
 
 
 main()
