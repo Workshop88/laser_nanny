@@ -22,18 +22,13 @@
 # sudo pip install RPi.GPIO
 
 
-
+import socket
+import select
 import sys
-
 import RPi.GPIO as GPIO #pylint: disable=I0011,F0401
-
 import datetime;
 
 from time import sleep
-from w1thermsensor import W1ThermSensor
-sensor = W1ThermSensor()
-
-
 from charlcd.drivers.gpio import Gpio
 from charlcd import lcd_buffered as lcd
 from charlcd.drivers.i2c import I2C #pylint: disable=I0011,F0401
@@ -71,14 +66,6 @@ def printKey(key):
 # printKey will be called each time a keypad button is pressed
 keypad.registerKeyPressHandler(printKey)
 
-def key_press_check():
-    global key_press
-    if key_press == True:
-        key_press = False
-        string_to_lcd = str(key_value)
-        lcd_1.set_xy(15, 3)
-        lcd_1.stream(string_to_lcd)
-
 def main():
     global key_value
     global key_press
@@ -111,32 +98,63 @@ def main():
     lcd_1.write('-----')
     lcd_1.flush()
 
-    # Identify sensors and remember their purposes.
-    sensor_list = W1ThermSensor.get_available_sensors();
-    sensor01_id = sensor_list[0].id;
-    sensor02_id = sensor_list[1].id;
 
-#    print 'Sensor 01 ID:{0}'.format(sensor01_id)
-#    print 'Sensor 02 ID:{0}'.format(sensor02_id)
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server_socket.bind(('', 6000))
+    server_socket.listen(5)
+    print "Listening on port 6000"
+
+    read_list = [server_socket]
+    lcd_update = False
 
     while True:
-        temperature_in_fahrenheit = sensor_list[0].get_temperature(W1ThermSensor.DEGREES_F)
-        print(datetime.datetime.now().time().strftime('%H:%M:%S'))
+        time_string = datetime.datetime.now().time().strftime('%H:%M:%S')
         lcd_1.set_xy(20, 3)
-        lcd_1.stream(datetime.datetime.now().time().strftime('%H:%M:%s'))
-        key_press_check()
-        string_to_lcd = str(temperature_in_fahrenheit)
-        lcd_1.set_xy(20, 1)
-        lcd_1.stream(string_to_lcd)
-        temperature_in_fahrenheit = sensor_list[1].get_temperature(W1ThermSensor.DEGREES_F)
-        print(datetime.datetime.now().time().strftime('%H:%M:%S'))
-        lcd_1.set_xy(20, 3)
-        lcd_1.stream(datetime.datetime.now().time().strftime('%H:%M:%s'))
-        key_press_check()
-        string_to_lcd = str(temperature_in_fahrenheit)
-        lcd_1.set_xy(20, 2)
-        lcd_1.stream(string_to_lcd)
-        lcd_1.flush()
+        lcd_1.stream(time_string)
+
+        # Process the keyparesses here.
+        if key_press == True:
+            key_press = False
+            string_to_lcd = str(key_value)
+            lcd_1.set_xy(15, 3)
+            lcd_1.stream(string_to_lcd)
+            lcd_update = True
+
+        # Check for new temperature data.  This only blocks for 1/10 of a second.
+        # The "0.1" is the 100ms timeout.  We only want 1/10 of a second then
+        # proceed to other things.
+        readable, writable, errored = select.select(read_list, [], [], 0.1)
+        for s in readable:
+### don't think this is necesssary ###            s.setblocking(0)
+            if s is server_socket:
+                client_socket, address = server_socket.accept()
+                read_list.append(client_socket)
+                print "Connection from", address
+            else:
+                data = s.recv(1024)
+                if data:
+                    # Temperature process is sending data: "<probe_number>, <temperature>"
+                    data_list = data.split(",")
+                    if data_list[0] == "1":
+                        # This is temperature sensor 1.
+                        print("Sensor 1: " + data_list[1])
+                        lcd_1.set_xy(20, 1)
+                        lcd_1.stream(data_list[1])
+                    else:
+                        # This is temperature sensor 2.
+                        print("Sensor 2: " + data_list[1])
+                        lcd_1.set_xy(20, 2)
+                        lcd_1.stream(data_list[1])
+                    lcd_update = True
+                else:
+                    s.close()
+                    read_list.remove(s)
+
+        # Only update the LCD here to save time.
+        if lcd_update:
+            lcd_1.flush()
+            lcd_update = False
 
 
 main()
