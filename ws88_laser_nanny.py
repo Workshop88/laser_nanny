@@ -108,53 +108,61 @@ def main():
     read_list = [server_socket]
     lcd_update = False
 
-    while True:
-        time_string = datetime.datetime.now().time().strftime('%H:%M:%S')
-        lcd_1.set_xy(20, 3)
-        lcd_1.stream(time_string)
+    try:
+        while True:
+            time_string = datetime.datetime.now().time().strftime('%H:%M:%S')
+            lcd_1.set_xy(20, 3)
+            lcd_1.stream(time_string)
 
-        # Process the keyparesses here.
-        if key_press == True:
-            key_press = False
-            string_to_lcd = str(key_value)
-            lcd_1.set_xy(15, 3)
-            lcd_1.stream(string_to_lcd)
-            lcd_update = True
+            # Process the keyparesses here.
+            if key_press == True:
+                key_press = False
+                string_to_lcd = str(key_value)
+                lcd_1.set_xy(15, 3)
+                lcd_1.stream(string_to_lcd)
+                lcd_update = True
 
-        # Check for new temperature data.  This only blocks for 1/10 of a second.
-        # The "0.1" is the 100ms timeout.  We only want 1/10 of a second then
-        # proceed to other things.
-        readable, writable, errored = select.select(read_list, [], [], 0.1)
-        for s in readable:
+            # Check for new temperature data.  This only blocks for 1/10 of a second.
+            # The "0.1" is the 100ms timeout.  We only want 1/10 of a second then
+            # proceed to other things.
+            readable, writable, errored = select.select(read_list, [], [], 0.1)
+            for s in readable:
 ### don't think this is necesssary ###            s.setblocking(0)
-            if s is server_socket:
-                client_socket, address = server_socket.accept()
-                read_list.append(client_socket)
-                print "Connection from", address
-            else:
-                data = s.recv(1024)
-                if data:
-                    # Temperature process is sending data: "<probe_number>, <temperature>"
-                    data_list = data.split(",")
-                    if data_list[0] == "1":
-                        # This is temperature sensor 1.
-                        print("Sensor 1: " + data_list[1])
-                        lcd_1.set_xy(20, 1)
-                        lcd_1.stream(data_list[1])
-                    else:
-                        # This is temperature sensor 2.
-                        print("Sensor 2: " + data_list[1])
-                        lcd_1.set_xy(20, 2)
-                        lcd_1.stream(data_list[1])
-                    lcd_update = True
+                if s is server_socket:
+                    client_socket, address = server_socket.accept()
+                    read_list.append(client_socket)
+                    print "Connection from", address
                 else:
-                    s.close()
-                    read_list.remove(s)
+                    data = s.recv(1024)
+                    if data:
+                        # Temperature process is sending data: "<probe_number>, <temperature>"
+                        data_list = data.split(",")
+                        if data_list[0] == "1":
+                            # This is temperature sensor 1.
+                            print("Sensor 1: " + data_list[1])
+                            lcd_1.set_xy(20, 1)
+                            lcd_1.stream(data_list[1])
+                        else:
+                            # This is temperature sensor 2.
+                            print("Sensor 2: " + data_list[1])
+                            lcd_1.set_xy(20, 2)
+                            lcd_1.stream(data_list[1])
+                        lcd_update = True
+                    else:
+                        s.close()
+                        read_list.remove(s)
 
-        # Only update the LCD here to save time.
-        if lcd_update:
-            lcd_1.flush()
-            lcd_update = False
+            # Only update the LCD here to save time.
+            if lcd_update:
+                lcd_1.flush()
+                lcd_update = False
+
+    # Catch a keyboard ctrl-c and exit cleanly by giving up the GPIO pins.
+    except KeyboardInterrupt:
+        print("\rCtrl-C detected.  Cleaning up and exiting ws88_laser_nanny.")
+        GPIO.cleanup()
+        sys.exit()
+
 
 
 main()
