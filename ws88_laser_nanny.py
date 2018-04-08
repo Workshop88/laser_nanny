@@ -22,6 +22,8 @@
 # sudo pip install RPi.GPIO
 
 
+import os
+import errno
 import socket
 import select
 import sys
@@ -32,6 +34,7 @@ from time import sleep
 from charlcd.drivers.gpio import Gpio
 from charlcd import lcd_buffered as lcd
 from charlcd.drivers.i2c import I2C #pylint: disable=I0011,F0401
+from socket import error as socket_error
 
 GPIO.setmode(GPIO.BCM)
 
@@ -66,7 +69,65 @@ def printKey(key):
 # printKey will be called each time a keypad button is pressed
 keypad.registerKeyPressHandler(printKey)
 
-def main():
+def child():
+    print("Starting child: ", os.getpid())
+
+    from w1thermsensor import W1ThermSensor
+    sensor = W1ThermSensor()
+
+    # Identify sensors and remember their purposes.
+    sensor_list = W1ThermSensor.get_available_sensors();
+    sensor01_id = sensor_list[0].id;
+    sensor02_id = sensor_list[1].id;
+
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+    # Looping until we get connected.
+    socket_keep_trying = True
+    while socket_keep_trying:
+        try:
+            server_socket.connect(('', 6000))
+            # If we are here the socket connect worked and we did not throw an exception.
+            # This is what we want so exit the while loop.
+            socket_keep_trying = False
+        except socket_error as serr:
+            # Check for connection refused (111)
+            if serr.errno != errno.ECONNREFUSED:
+                # There are not the errors (111) we are looking for.
+                # So raise the error again.
+                raise serr
+            # Else this must be the error we are looking for.
+            # So stay in loop until it goes away.
+
+### debug print ###    print "Sending on port 6000"
+
+    while True:
+        temperature_in_fahrenheit = sensor_list[0].get_temperature(W1ThermSensor.DEGREES_F)
+        string_temp = "1, " + str(temperature_in_fahrenheit)
+        try:
+            server_socket.send(string_temp)
+        except socket_error as serr:
+            # Check for broken pipe (32).
+            if serr.errno == errno.EPIPE:
+                # Exit the child as the parent likely had terminated.
+                os._exit(0)
+### debug print ###        print(temperature_in_fahrenheit)
+
+        temperature_in_fahrenheit = sensor_list[1].get_temperature(W1ThermSensor.DEGREES_F)
+        string_temp = "2, " + str(temperature_in_fahrenheit)
+        try:
+            server_socket.send(string_temp)
+        except sockte_error as serr:
+            # Check for broken pipe (32).
+            if serr.errno == errno.EPIPE:
+                # Exit the child as the parent likely has terminated.
+                os._exit(0)
+### debug print ###        print(temperature_in_fahrenheit)
+
+
+
+def parent():
     global key_value
     global key_press
 
@@ -164,10 +225,17 @@ def main():
         sys.exit()
 
 
+def main():
+    newpid = os.fork()
+    if newpid == 0:
+        child()
+    else:
+        print("Parent: ", os.getpid(), "Child: ", newpid)
+        parent()
+   
 
 main()
 
-GPIO.cleanup()
 
 
 
