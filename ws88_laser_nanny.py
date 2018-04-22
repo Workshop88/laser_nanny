@@ -172,8 +172,11 @@ def parent():
     try:
         while True:
             time_string = datetime.datetime.now().time().strftime('%H:%M:%S')
+            date_string = datetime.datetime.now().date().strftime('%Y-%m-%d')
             lcd_1.set_xy(20, 3)
             lcd_1.stream(time_string)
+            lcd_1.set_xy(30, 3)
+            lcd_1.stream(date_string)
 
             # Process the keyparesses here.
             if key_press == True:
