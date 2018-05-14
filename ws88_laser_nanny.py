@@ -30,6 +30,9 @@ import sys
 import RPi.GPIO as GPIO #pylint: disable=I0011,F0401
 import datetime;
 
+import urllib
+import urllib2
+
 from time import sleep
 from charlcd.drivers.gpio import Gpio
 from charlcd import lcd_buffered as lcd
@@ -56,6 +59,8 @@ keypad = factory.create_keypad(keypad=KEYPAD, row_pins=ROW_PINS, col_pins=COL_PI
 
 global key_value
 global key_press
+
+url = 'http://www.domain.com/save.cgi/'
 
 # Need to set an initial value of no key press.
 key_press = False
@@ -118,7 +123,7 @@ def child():
         string_temp = "2, " + str(temperature_in_fahrenheit)
         try:
             server_socket.send(string_temp)
-        except sockte_error as serr:
+        except socket_error as serr:
             # Check for broken pipe (32).
             if serr.errno == errno.EPIPE:
                 # Exit the child as the parent likely has terminated.
@@ -168,11 +173,23 @@ def parent():
 
     read_list = [server_socket]
     lcd_update = False
+    web_update = False
+
+    seconds = datetime.datetime.now()
+    seconds_interval = seconds + datetime.timedelta(seconds = 10)
+
+
+    print seconds
+    print seconds_interval
 
     try:
         while True:
             time_string = datetime.datetime.now().time().strftime('%H:%M:%S')
             date_string = datetime.datetime.now().date().strftime('%Y-%m-%d')
+            seconds = datetime.datetime.now()
+            if seconds > seconds_interval:
+                seconds_interval = seconds + datetime.timedelta(seconds = 10)
+                web_update = True
             lcd_1.set_xy(20, 3)
             lcd_1.stream(time_string)
             lcd_1.set_xy(30, 3)
@@ -206,11 +223,13 @@ def parent():
                             print("Sensor 1: " + data_list[1])
                             lcd_1.set_xy(20, 1)
                             lcd_1.stream(data_list[1])
+                            temperature_sensor_1 = data_list[1]
                         else:
                             # This is temperature sensor 2.
                             print("Sensor 2: " + data_list[1])
                             lcd_1.set_xy(20, 2)
                             lcd_1.stream(data_list[1])
+                            temperature_sensor_2 = data_list[1]
                         lcd_update = True
                     else:
                         s.close()
@@ -218,8 +237,17 @@ def parent():
 
             # Only update the LCD here to save time.
             if lcd_update:
-                lcd_1.flush()
                 lcd_update = False
+                lcd_1.flush()
+
+            # Only update the web page when temperature changes.
+            if web_update:
+                web_update = False
+                data_string = temperature_sensor_1+","+temperature_sensor_2
+                data = urllib.urlencode({'feed_name':data_string})
+                full_url = url + '?' + data
+                response = urllib2.urlopen(full_url)
+                print full_url
 
     # Catch a keyboard ctrl-c and exit cleanly by giving up the GPIO pins.
     except KeyboardInterrupt:
