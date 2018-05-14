@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<body>
+
+<h1>WS88 Exhaust Duct and Laser Cabinent Temperature</H1>
+
+<div id="chart_div"></div>
+
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+
+<script type="text/javascript">
+
+
+// Load google charts
+google.charts.load('current', {'packages':['corechart', 'gauge']});
+google.charts.setOnLoadCallback(drawChart);
+
+
+function getFileFromServer(url, doneCallback) {
+   var xhr;    xhr = new XMLHttpRequest();
+   xhr.onreadystatechange = handleStateChange;
+   xhr.open("GET", url, true);
+   xhr.send();    
+   function handleStateChange() 
+   {
+       if (xhr.readyState === 4) 
+       {
+           doneCallback(xhr.status == 200 ? xhr.responseText : null);
+       }
+   }
+}
+
+
+// Draw the chart and set the chart values
+function drawChart() {
+
+  var data = google.visualization.arrayToDataTable([
+    ['Label', 'Temperature'],
+    ['Duct', 0],
+  ]);
+
+  var options = {
+    width: 500,
+    height: 250,
+    redFrom: -20,
+    redTo: 0,
+    yellowFrom: 0,
+    yellowTo: 5,
+    greenFrom: 5,
+    greenTo: 35,
+    yellowFrom: 35,
+    yellowTo: 50,
+    redFrom: 50,
+    redTo: 100,
+    minorTicks: 10,
+    min: -20,
+    max: 100,
+    majorTicks: [
+      '-20', 
+      '-10',
+      '0', 
+      '10',
+      '20', 
+      '30',
+      '40', 
+      '50',
+      '60', 
+      '70',
+      '80', 
+      '90',
+      '100', 
+    ]
+  };
+
+  var chart = new google.visualization.Gauge(document.getElementById('chart_div'));
+
+
+
+var temps_returned = getFileFromServer("./laser_nanny_data.txt", function(text) 
+{
+  if (text === null) 
+  {
+    // An error occurred
+  }
+  else 
+  {
+    // `text` is the file text
+
+    var lines_each = text.split('\n');
+    var lines_last = lines_each.slice(-2)[0];
+    var fields = lines_last.split(',');
+    var temps = 
+    {
+      temp1: fields.slice(-2)[0],
+      temp2: fields.slice(-1)[0]
+    };
+
+    return temps;
+    }
+  }, true
+);
+
+
+  // Test to initialize variable.  Doesn't appear to do any good.
+  var temperature_read_duct = 25;
+  var temperature_read_laser = 32;
+//  var temps_returned =
+//  {
+//    temp2:2,
+//    temp1:1
+//  };
+
+
+// temperature_read_duct = temps_returned.temp1;
+// temperature_read_laser = temps_returned.temp2;
+
+
+  var data = google.visualization.arrayToDataTable([
+    ['Label', 'Temperature'],
+    ['Duct', temperature_read_duct],
+    ['Laser', temperature_read_laser],
+  ]);
+  chart.draw(data, options);
+
+}
+
+</script>
+</body>
+</html>
