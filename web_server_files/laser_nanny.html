@@ -74,46 +74,22 @@ function drawChart() {
 
   var chart = new google.visualization.Gauge(document.getElementById('chart_div'));
 
+  var allText =[];
+  var sourceLines = [];
+  var dataLines = [];
+  var fields = [];
+  var txtFileSync = new XMLHttpRequest();
+  txtFileSync.open("GET","laser_nanny_data.txt",false);
+  txtFileSync.send();
+  allText = txtFileSync.responseText;
+  sourceLines = allText.split(/\r\n|\n/);
+  fields = sourceLines[sourceLines.length - 2].split(',')
 
+  var temperature_read_duct = parseFloat(fields[0]);
+  var temperature_read_laser = parseFloat(fields[1]);
 
-var temps_returned = getFileFromServer("./laser_nanny_data.txt", function(text) 
-{
-  if (text === null) 
-  {
-    // An error occurred
-  }
-  else 
-  {
-    // `text` is the file text
-
-    var lines_each = text.split('\n');
-    var lines_last = lines_each.slice(-2)[0];
-    var fields = lines_last.split(',');
-    var temps = 
-    {
-      temp1: fields.slice(-2)[0],
-      temp2: fields.slice(-1)[0]
-    };
-
-    return temps;
-    }
-  }, true
-);
-
-
-  // Test to initialize variable.  Doesn't appear to do any good.
-  var temperature_read_duct = 25;
-  var temperature_read_laser = 32;
-//  var temps_returned =
-//  {
-//    temp2:2,
-//    temp1:1
-//  };
-
-
-// temperature_read_duct = temps_returned.temp1;
-// temperature_read_laser = temps_returned.temp2;
-
+  txtFileSync=null;
+  allText = null;
 
   var data = google.visualization.arrayToDataTable([
     ['Label', 'Temperature'],
