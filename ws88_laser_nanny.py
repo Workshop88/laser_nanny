@@ -60,7 +60,7 @@ keypad = factory.create_keypad(keypad=KEYPAD, row_pins=ROW_PINS, col_pins=COL_PI
 global key_value
 global key_press
 
-url = 'http://www.domain.com/save.cgi/'
+url = 'http://url.of.web.page.cgi/'
 
 # Need to set an initial value of no key press.
 key_press = False
@@ -243,8 +243,10 @@ def parent():
             # Only update the web page when temperature changes.
             if web_update:
                 web_update = False
-                data_string = temperature_sensor_1+","+temperature_sensor_2
+                data_string = temperature_sensor_1+','+temperature_sensor_2+','+time_string
+#                data_string = "temp1="+temperature_sensor_1+"&temp2="+temperature_sensor_2
                 data = urllib.urlencode({'feed_name':data_string})
+#                data = urllib.unquote({'feed_name':data_string})
                 full_url = url + '?' + data
                 response = urllib2.urlopen(full_url)
                 print full_url
