@@ -87,6 +87,7 @@ function drawChart() {
 
   var temperature_read_duct = parseFloat(fields[0]);
   var temperature_read_laser = parseFloat(fields[1]);
+  var time_stamp_from_laser = parseFloat(fields[2]);
 
   txtFileSync=null;
   allText = null;
@@ -97,7 +98,6 @@ function drawChart() {
     ['Laser', temperature_read_laser],
   ]);
   chart.draw(data, options);
-
 }
 
 </script>
