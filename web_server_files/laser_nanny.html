@@ -6,6 +6,10 @@
 
 <div id="chart_div"></div>
 
+<h2>
+<div id="timestamp_div"></div>
+</h2>
+
 <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 
 <script type="text/javascript">
@@ -87,7 +91,9 @@ function drawChart() {
 
   var temperature_read_duct = parseFloat(fields[0]);
   var temperature_read_laser = parseFloat(fields[1]);
-  var time_stamp_from_laser = parseFloat(fields[2]);
+  var time_stamp_from_laser = (fields[2]);
+
+  document.getElementById("timestamp_div").innerText = "Time stamp: "+time_stamp_from_laser;
 
   txtFileSync=null;
   allText = null;
