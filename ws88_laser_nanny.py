@@ -38,6 +38,9 @@ from charlcd.drivers.gpio import Gpio
 from charlcd import lcd_buffered as lcd
 from charlcd.drivers.i2c import I2C #pylint: disable=I0011,F0401
 from socket import error as socket_error
+from enum import Enum
+
+screen_lcd = Enum('screen_lcd', 'info menu status settings about')
 
 GPIO.setmode(GPIO.BCM)
 
@@ -60,7 +63,8 @@ keypad = factory.create_keypad(keypad=KEYPAD, row_pins=ROW_PINS, col_pins=COL_PI
 global key_value
 global key_press
 
-url = 'http://url.of.web.page.cgi/'
+#url = 'http://url.of.web.page.cgi/'
+url = os.environ["URL_SERVER"]
 
 # Need to set an initial value of no key press.
 key_press = False
@@ -146,25 +150,52 @@ def parent():
         'DB6': 20,
         'DB7': 21
     }
+
+    # Initialize LCD menus
+    menus = { # key=menu_number+item_number, menu_text, menu_next
+        'Menu001Item001':("WorkShop88 LaserCutter Monitor V1.0", 2),
+        'Menu001Item002':("Duct Temperature:", 2),
+        'Menu001Item003':("Cutter Temperature:", 2),
+        'Menu001Item004':("Blastgate:", 2),
+        'Menu002Item001':("Open Blast Gate", 2),
+        'Menu002Item002':("Close Blast Gate", 2),
+        'Menu002Item003':("Settings", 3),
+        'Menu002Item004':("About", 4),
+    }
+    menu_current = 1
+
+    # Initialize LCD.
     lcd_1 = lcd.CharLCD(40, 4, drv, 0, 0)
     lcd_1.init()
-    lcd_1.set_xy(0,0)
-    lcd_1.stream('WorkShop88 LaserCutter Monitor V1.0')
-    lcd_1.set_xy(0,1)
-    lcd_1.write('Duct Temperature:')
-    lcd_1.set_xy(0,2)
-    lcd_1.write('Cutter Temperature:')
-    lcd_1.set_xy(0,3)
-    lcd_1.write('Blastgate:')
-    lcd_1.set_xy(20,1)
-    lcd_1.write('--.-')
-    lcd_1.set_xy(20,2)
-    lcd_1.write('--.-')
-    lcd_1.set_xy(12,3)
-    lcd_1.write('-----')
+
+    # Render menus.
+    for item in menus:
+        if item.startswith("Menu"+"{:03n}".format(menu_current)):
+            print(menus.get(item)[0])
+            lcd_1.set_xy(0,((int(item[11:14])) - 1))
+            lcd_1.stream(menus.get(item)[0])
+
     lcd_1.flush()
 
+#    lcd_1.set_xy(0,0)
+#    lcd_1.stream('WorkShop88 LaserCutter Monitor V1.0')
+#    lcd_1.set_xy(0,1)
+#    lcd_1.write('Duct Temperature:')
+#    lcd_1.set_xy(0,2)
+#    lcd_1.write('Cutter Temperature:')
+#    lcd_1.set_xy(0,3)
+#    lcd_1.write('Blastgate:')
+#    lcd_1.set_xy(20,1)
+#    lcd_1.write('--.-')
+#    lcd_1.set_xy(20,2)
+#    lcd_1.write('--.-')
+#    lcd_1.set_xy(12,3)
+#    lcd_1.write('-----')
 
+
+
+
+    # Setup to listen for child process temperature readings.
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind(('', 6000))
@@ -182,6 +213,8 @@ def parent():
     print seconds
     print seconds_interval
 
+    screen_lcd_current = screen_lcd.info
+
     try:
         while True:
             time_string = datetime.datetime.now().time().strftime('%H:%M:%S')
@@ -197,6 +230,28 @@ def parent():
 
             # Process the keyparesses here.
             if key_press == True:
+                # Which menu are we in.
+                if screen_lcd_current == screen_lcd.info:
+                    screen_lcd_current == screen_lcd.menu
+                elif screen_lcd_current == screen_lcd.menu:
+                    if key_value == 1:
+                        screen_lcd_current == screen_lcd.status
+                    elif key_value == 2:
+                        # Open the blast gate.
+                        blast_gate_open()
+                    elif key_value == 3:
+                        # Close the blast gate.
+                        blast_gate_close()
+                    elif key_value == 4:
+                        screen_lcd_current == screen_lcd.settings
+                    elif key_value == 5:
+                        screen_lcd_current == screen_lcd.about
+                    elif key_value == '*':
+                        screen_lcd_current == screen_lcd.info
+#                elif screen_lcd_current == screen_lcd.status
+#                elif screen_lcd_current == screen_lcd.settings
+#                elif screen_lcd_current == screen_lcd.about
+
                 key_press = False
                 string_to_lcd = str(key_value)
                 lcd_1.set_xy(15, 3)
@@ -257,7 +312,15 @@ def parent():
         GPIO.cleanup()
         sys.exit()
 
+def blast_gate_open():
+    lcd_1.set_xy(12,3)
+    lcd_1.write('Open')
 
+def blast_gate_close():
+    lcd_1.set_xy(12,3)
+    lcd_1.write('Close')
+
+# Decide if we are the child or the parent.
 def main():
     newpid = os.fork()
     if newpid == 0:
@@ -267,6 +330,7 @@ def main():
         parent()
    
 
+# Call main.
 main()
 
 
