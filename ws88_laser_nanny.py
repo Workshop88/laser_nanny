@@ -63,7 +63,6 @@ keypad = factory.create_keypad(keypad=KEYPAD, row_pins=ROW_PINS, col_pins=COL_PI
 global key_value
 global key_press
 
-#url = 'http://www.xnet.com/~stuart/ws88/save.cgi/'
 url = os.environ["URL_SERVER"]
 
 # Need to set an initial value of no key press.
@@ -152,15 +151,43 @@ def parent():
     }
 
     # Initialize LCD menus
-    menus = { # key=menu_number+item_number, menu_text, menu_next
-        'Menu001Item001':("WorkShop88 LaserCutter Monitor V1.0", 2),
-        'Menu001Item002':("Duct Temperature:", 2),
-        'Menu001Item003':("Cutter Temperature:", 2),
-        'Menu001Item004':("Blastgate:", 2),
-        'Menu002Item001':("Open Blast Gate", 2),
-        'Menu002Item002':("Close Blast Gate", 2),
-        'Menu002Item003':("Settings", 3),
-        'Menu002Item004':("About", 4),
+    menus = { # key=menu_number+item_number, menu_text, menu_next, function
+        # First menu is always a splash / information only screen.  
+        'Menu001Type':'Info',
+        'Menu001Item001':("WorkShop88 LaserCutter Monitor V1.0", 2, null_function),
+        'Menu001Item002':("Duct Temperature:", 2, null_function),
+        'Menu001Item003':("Cutter Temperature:", 2, null_function),
+        'Menu001Item004':("Blastgate:", 2, null_function),
+
+        # All other menus are numerated lists of selectable items.
+        # Top menu.
+        'Menu002Type':'Menu',
+        'Menu002Item001':("Manual Control", 3, null_function),
+        'Menu002Item002':("Status", 4, null_function),
+        'Menu002Item003':("Settings", 5, null_function),
+#        'Menu002Item004':("About", 2, about_function),
+        'Menu002Item004':("Back", 1, null_function),
+
+        # Manual control.
+        'Menu003Type':'Menu',
+        'Menu003Item001':("Open Blast Gate", 3, blast_gate_open),
+        'Menu003Item002':("Close Blast Gate", 3, blast_gate_close),
+        'Menu003Item003':("Push report to web.", 3, push_report_to_web),
+        'Menu003Item004':("Back", 2, null_function),
+
+        # Status.
+        'Menu004Type':'Menu',
+        'Menu004Item001':("Elasped On Time:", 4, null_function),
+        'Menu004Item002':("On Time Stamp:", 4, null_function),
+        'Menu004Item003':("Off Time Stamp:", 4, null_function),
+        'Menu004Item004':("Back", 2, null_function),
+
+        # Settings.
+        'Menu005Type':'Menu',
+        'Menu005Item001':("Publish on temp change.", 5, null_function),
+        'Menu005Item002':("Publish on time change.", 5, null_function),
+        'Menu005Item003':("Publish on temp or time change.", 5, null_function),
+        'Menu005Item004':("Back", 2, null_function),
     }
     menu_current = 1
 
@@ -170,30 +197,11 @@ def parent():
 
     # Render menus.
     for item in menus:
-        if item.startswith("Menu"+"{:03n}".format(menu_current)):
+        if item.startswith("Menu"+"{:03n}".format(menu_current)+"Item"):
             print(menus.get(item)[0])
             lcd_1.set_xy(0,((int(item[11:14])) - 1))
             lcd_1.stream(menus.get(item)[0])
-
     lcd_1.flush()
-
-#    lcd_1.set_xy(0,0)
-#    lcd_1.stream('WorkShop88 LaserCutter Monitor V1.0')
-#    lcd_1.set_xy(0,1)
-#    lcd_1.write('Duct Temperature:')
-#    lcd_1.set_xy(0,2)
-#    lcd_1.write('Cutter Temperature:')
-#    lcd_1.set_xy(0,3)
-#    lcd_1.write('Blastgate:')
-#    lcd_1.set_xy(20,1)
-#    lcd_1.write('--.-')
-#    lcd_1.set_xy(20,2)
-#    lcd_1.write('--.-')
-#    lcd_1.set_xy(12,3)
-#    lcd_1.write('-----')
-
-
-
 
     # Setup to listen for child process temperature readings.
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -215,6 +223,9 @@ def parent():
 
     screen_lcd_current = screen_lcd.info
 
+    temperature_sensor_1_change = False
+    temperature_sensor_2_change = False
+
     try:
         while True:
             time_string = datetime.datetime.now().time().strftime('%H:%M:%S')
@@ -223,47 +234,49 @@ def parent():
             if seconds > seconds_interval:
                 seconds_interval = seconds + datetime.timedelta(seconds = 10)
                 web_update = True
-            lcd_1.set_xy(20, 3)
+            lcd_1.set_xy(32, 2)
             lcd_1.stream(time_string)
             lcd_1.set_xy(30, 3)
             lcd_1.stream(date_string)
 
-            # Process the keyparesses here.
+            # Process key presses & menu changes here.
             if key_press == True:
-                # Which menu are we in.
-                if screen_lcd_current == screen_lcd.info:
-                    screen_lcd_current == screen_lcd.menu
-                elif screen_lcd_current == screen_lcd.menu:
-                    if key_value == 1:
-                        screen_lcd_current == screen_lcd.status
-                    elif key_value == 2:
-                        # Open the blast gate.
-                        blast_gate_open()
-                    elif key_value == 3:
-                        # Close the blast gate.
-                        blast_gate_close()
-                    elif key_value == 4:
-                        screen_lcd_current == screen_lcd.settings
-                    elif key_value == 5:
-                        screen_lcd_current == screen_lcd.about
-                    elif key_value == '*':
-                        screen_lcd_current == screen_lcd.info
-#                elif screen_lcd_current == screen_lcd.status
-#                elif screen_lcd_current == screen_lcd.settings
-#                elif screen_lcd_current == screen_lcd.about
-
+                # Clear out the keypress flag.
                 key_press = False
-                string_to_lcd = str(key_value)
-                lcd_1.set_xy(15, 3)
-                lcd_1.stream(string_to_lcd)
+                # Find the menu we will display next.
+                print("Before:",menu_current)
+                item =  "Menu"+"{:03n}".format(menu_current)+"Item"+"{:03n}".format(key_value)
+                print("using key:", item)
+                if item in menus:
+                    menu_current = menus.get(item)[1]
+                else:
+                    print("key not found in dictionary")
+                print("After:",menu_current)
+                # Render menu.
+                lcd_1.buffer_clear()
+                for item in menus:
+                    if item.startswith("Menu"+"{:03n}".format(menu_current)+"Item"):
+                        print(menus.get(item)[0])
+                        item_number = int(item[11:14])
+                        lcd_1.set_xy(0,(item_number - 1))
+                        print("====>", item[0:6])
+                        print("====>", menus.get(item[0:6]+"Type"))
+                        if menus.get(item[0:7]+"Type") == 'Menu':
+                            lcd_1.stream("{:1n}".format(item_number)+")"+menus.get(item)[0])
+                        else:
+                            lcd_1.stream(menus.get(item)[0])
                 lcd_update = True
+                # Call function if there is one.
+                if menus.get(item)[2] != null_function():
+                    menus.get(item)[2]()
+                
 
             # Check for new temperature data.  This only blocks for 1/10 of a second.
-            # The "0.1" is the 100ms timeout.  We only want 1/10 of a second then
+            # The "0.1" is the 100ms timeout.  We only wait 1/10 of a second then
             # proceed to other things.
             readable, writable, errored = select.select(read_list, [], [], 0.1)
             for s in readable:
-### don't think this is necesssary ###            s.setblocking(0)
+            ### rbf   Don't think this is necesssary ###            s.setblocking(0)
                 if s is server_socket:
                     client_socket, address = server_socket.accept()
                     read_list.append(client_socket)
@@ -275,27 +288,38 @@ def parent():
                         data_list = data.split(",")
                         if data_list[0] == "1":
                             # This is temperature sensor 1.
-                            print("Sensor 1: " + data_list[1])
-                            lcd_1.set_xy(20, 1)
-                            lcd_1.stream(data_list[1])
                             temperature_sensor_1 = data_list[1]
+                            temperature_sensor_1_change = True
                         else:
                             # This is temperature sensor 2.
-                            print("Sensor 2: " + data_list[1])
-                            lcd_1.set_xy(20, 2)
-                            lcd_1.stream(data_list[1])
                             temperature_sensor_2 = data_list[1]
-                        lcd_update = True
+                            temperature_sensor_2_change = True
                     else:
                         s.close()
                         read_list.remove(s)
+
+            # Manage dynamic LCD information.
+            if menu_current == 1:
+                # Manage reporting temperature on LCD.
+                 if temperature_sensor_1_change == True:
+                     temperature_sensor_1_change = False
+                     print("Sensor 1: " + data_list[1])
+                     lcd_1.set_xy(20, 1)
+                     lcd_1.stream(data_list[1])
+                     lcd_update = True
+                 if temperature_sensor_2_change == True:
+                     temperature_sensor_2_change = False
+                     print("Sensor 2: " + data_list[1])
+                     lcd_1.set_xy(20, 2)
+                     lcd_1.stream(data_list[1])
+                     lcd_update = True
 
             # Only update the LCD here to save time.
             if lcd_update:
                 lcd_update = False
                 lcd_1.flush()
 
-            # Only update the web page when temperature changes.
+            #  Manage reporting temperature on web page.
             if web_update:
                 web_update = False
                 data_string = temperature_sensor_1+','+temperature_sensor_2+','+time_string
@@ -312,13 +336,20 @@ def parent():
         GPIO.cleanup()
         sys.exit()
 
+# Function to open blast gate.
 def blast_gate_open():
-    lcd_1.set_xy(12,3)
-    lcd_1.write('Open')
+    print("Code to open blast gate goes here.")
 
+# Function to close blast gate.
 def blast_gate_close():
-    lcd_1.set_xy(12,3)
-    lcd_1.write('Close')
+    print("Code to close blast gate goes here.")
+
+def push_report_to_web():
+    web_update = True
+
+# This function should never be called.
+def null_function():
+    print("Something called the NULL Function: This function should never be called.")
 
 # Decide if we are the child or the parent.
 def main():
