@@ -28,7 +28,8 @@ import socket
 import select
 import sys
 import RPi.GPIO as GPIO #pylint: disable=I0011,F0401
-import datetime;
+import datetime
+import time
 
 import urllib
 import urllib2
@@ -44,13 +45,18 @@ screen_lcd = Enum('screen_lcd', 'info menu status settings about')
 
 GPIO.setmode(GPIO.BCM)
 
+# Setup GPIO port for servo control.
+GPIO.setup(18, GPIO.OUT)
+
 from pad4pi import rpi_gpio
 
 KEYPAD = [
         [1,2,3],
         [4,5,6],
         [7,8,9],
-        ["*",0,"#"]
+#        ["*",0,"#"]
+# rbf  For now we don't want to handle "*" & "#".
+        [0,0,0]
 ]
 
 ROW_PINS = [23,24,25,27] # BCM numbering
@@ -246,7 +252,8 @@ def parent():
                 # Find the menu we will display next.
                 print("Before:",menu_current)
                 item =  "Menu"+"{:03n}".format(menu_current)+"Item"+"{:03n}".format(key_value)
-                print("using key:", item)
+                item_save_for_later = item
+#                print("using key:", item)
                 if item in menus:
                     menu_current = menus.get(item)[1]
                 else:
@@ -259,16 +266,19 @@ def parent():
                         print(menus.get(item)[0])
                         item_number = int(item[11:14])
                         lcd_1.set_xy(0,(item_number - 1))
-                        print("====>", item[0:6])
-                        print("====>", menus.get(item[0:6]+"Type"))
+                        # Only enumerate menus.
                         if menus.get(item[0:7]+"Type") == 'Menu':
                             lcd_1.stream("{:1n}".format(item_number)+")"+menus.get(item)[0])
                         else:
                             lcd_1.stream(menus.get(item)[0])
                 lcd_update = True
                 # Call function if there is one.
-                if menus.get(item)[2] != null_function():
-                    menus.get(item)[2]()
+#                item =  "Menu"+"{:03n}".format(menu_current)+"Item"+"{:03n}".format(key_value)
+                if item_save_for_later in menus:
+                    if menus.get(item_save_for_later)[2] != null_function:
+                        print("===>", item_save_for_later)
+                        print("===>", menus.get(item_save_for_later)[2])
+                        menus.get(item_save_for_later)[2]()
                 
 
             # Check for new temperature data.  This only blocks for 1/10 of a second.
@@ -327,6 +337,7 @@ def parent():
                 data = urllib.urlencode({'feed_name':data_string})
 #                data = urllib.unquote({'feed_name':data_string})
                 full_url = url + '?' + data
+                print("url:", full_url)
                 response = urllib2.urlopen(full_url)
                 print full_url
 
@@ -339,10 +350,23 @@ def parent():
 # Function to open blast gate.
 def blast_gate_open():
     print("Code to open blast gate goes here.")
+    servo_blast_gate = GPIO.PWM(18, 50)
+    for i in range(1, 20):
+        # Where argument is the duty cycle (0.0 <= duty cycle <= 100.0)
+        servo_blast_gate.start(8)
+        time.sleep(.03)
+    servo_blast_gate.stop()
 
 # Function to close blast gate.
 def blast_gate_close():
     print("Code to close blast gate goes here.")
+    servo_blast_gate = GPIO.PWM(18, 50)
+    for i in range(1, 20):
+        # Where argument is the duty cycle (0.0 <= duty cycle <= 100.0)
+        servo_blast_gate.start(2)
+        time.sleep(.03)
+    servo_blast_gate.stop()
+
 
 def push_report_to_web():
     web_update = True
