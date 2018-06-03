@@ -43,7 +43,11 @@ from enum import Enum
 
 screen_lcd = Enum('screen_lcd', 'info menu status settings about')
 
+# Setup for BCM pin numbering.
 GPIO.setmode(GPIO.BCM)
+
+# Setup for LaserCutter On/Off input.
+GPIO.setup(17, GPIO.IN)
 
 # Setup GPIO port for servo control.
 GPIO.setup(18, GPIO.OUT)
@@ -178,7 +182,7 @@ def parent():
         'Menu003Type':'Menu',
         'Menu003Item001':("Open Blast Gate", 3, blast_gate_open),
         'Menu003Item002':("Close Blast Gate", 3, blast_gate_close),
-        'Menu003Item003':("Push report to web.", 3, push_report_to_web),
+        'Menu003Item003':("Push report to web", 3, push_report_to_web),
         'Menu003Item004':("Back", 2, null_function),
 
         # Status.
@@ -219,6 +223,7 @@ def parent():
     read_list = [server_socket]
     lcd_update = False
     web_update = False
+    lasercutter_state = False
 
     seconds = datetime.datetime.now()
     seconds_interval = seconds + datetime.timedelta(seconds = 10)
@@ -244,6 +249,18 @@ def parent():
             lcd_1.stream(time_string)
             lcd_1.set_xy(30, 3)
             lcd_1.stream(date_string)
+
+            # Process LaserCutter power On/Off here.
+            if GPIO.input(17) == True:
+                if lasercutter_state == False:
+                    lasercutter_state = True
+                    blast_gate_open()
+                    print("LaserCutter is On.")
+            else:
+                if lasercutter_state == True:
+                    lasercutter_state = False
+                    blast_gate_close()
+                    print("LaserCutter is Off.")
 
             # Process key presses & menu changes here.
             if key_press == True:
@@ -323,6 +340,15 @@ def parent():
                      lcd_1.set_xy(20, 2)
                      lcd_1.stream(data_list[1])
                      lcd_update = True
+                 if lasercutter_state == True:
+                     lcd_1.set_xy(20, 3)
+                     lcd_1.stream("Open ")
+                     lcd_update = True
+                 else:
+                     lcd_1.set_xy(20, 3)
+                     lcd_1.stream("Close")
+                     lcd_update = True
+
 
             # Only update the LCD here to save time.
             if lcd_update:
