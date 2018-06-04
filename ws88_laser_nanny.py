@@ -175,8 +175,8 @@ def parent():
         'Menu002Item001':("Manual Control", 3, null_function),
         'Menu002Item002':("Status", 4, null_function),
         'Menu002Item003':("Settings", 5, null_function),
-#        'Menu002Item004':("About", 2, about_function),
         'Menu002Item004':("Back", 1, null_function),
+        'Menu002Item005':("About", 6, null_function),
 
         # Manual control.
         'Menu003Type':'Menu',
@@ -198,6 +198,12 @@ def parent():
         'Menu005Item002':("Publish on time change.", 5, null_function),
         'Menu005Item003':("Publish on temp or time change.", 5, null_function),
         'Menu005Item004':("Back", 2, null_function),
+
+        'Menu006Type':'Info',
+        'Menu006Item001':("The LaserCutter laser nanny project is ", 2, null_function),
+        'Menu006Item002':("hosted at: https://github.com/Workshop88", 2, null_function),
+        'Menu006Item003':("/laser_nanny", 2, null_function),
+        'Menu006Item004':("", 2, null_function),
     }
     menu_current = 1
 
@@ -282,7 +288,8 @@ def parent():
                     if item.startswith("Menu"+"{:03n}".format(menu_current)+"Item"):
                         print(menus.get(item)[0])
                         item_number = int(item[11:14])
-                        lcd_1.set_xy(0,(item_number - 1))
+                        # Set LCD position of item's text.
+                        lcd_1.set_xy((20 * int(item_number / 5)),(item_number - 1) % 4)
                         # Only enumerate menus.
                         if menus.get(item[0:7]+"Type") == 'Menu':
                             lcd_1.stream("{:1n}".format(item_number)+")"+menus.get(item)[0])
