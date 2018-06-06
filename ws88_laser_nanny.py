@@ -40,6 +40,7 @@ from charlcd import lcd_buffered as lcd
 from charlcd.drivers.i2c import I2C #pylint: disable=I0011,F0401
 from socket import error as socket_error
 from enum import Enum
+from datetime import datetime as dt
 
 screen_lcd = Enum('screen_lcd', 'info menu status settings about')
 
@@ -231,13 +232,11 @@ def parent():
     web_update = False
     lasercutter_state = False
 
-    seconds = datetime.datetime.now()
+    seconds = dt.now()
     seconds_interval = seconds + datetime.timedelta(seconds = 10)
     # rbf  Should get these from history file.
-    time_string_last_start = datetime.datetime.now().time().strftime('%H:%M:%S')
-#    time_string_last_start = datetime.datetime.now().time()
-    time_string_last_end = datetime.datetime.now().time().strftime('%H:%M:%S')
-#    time_string_last_end = datetime.datetime.now().time()
+    time_string_last_start = dt.now().time().strftime('%H:%M:%S')
+    time_string_last_end = dt.now().time().strftime('%H:%M:%S')
 
     print seconds
     print seconds_interval
@@ -249,9 +248,15 @@ def parent():
 
     try:
         while True:
-            time_string = datetime.datetime.now().time().strftime('%H:%M:%S')
-            date_string = datetime.datetime.now().date().strftime('%Y-%m-%d')
-            seconds = datetime.datetime.now()
+            time_string = dt.now().time().strftime('%H:%M:%S')
+#            time_string = dt.now().time().strftime('%Y-%m-%d %H:%M:%S')
+            date_string = dt.now().date().strftime('%Y-%m-%d')
+#            seconds = datetime.datetime.now()
+            seconds = dt.now()
+            timestamp = int(time.mktime(dt.now().timetuple()))
+            print("timestamp:", timestamp)
+            now = dt.fromtimestamp(timestamp)
+            print("now:", now)
             if seconds > seconds_interval:
                 seconds_interval = seconds + datetime.timedelta(seconds = 10)
                 web_update = True
@@ -265,13 +270,15 @@ def parent():
                 if lasercutter_state == False:
                     lasercutter_state = True
                     blast_gate_open()
-                    time_string_last_start = datetime.datetime.now().time().strftime('%H:%M:%S')
+#                    time_string_last_start = datetime.datetime.now().time().strftime('%H:%M:%S')
+                    time_string_last_start = dt.now().time().strftime('%H:%M:%S')
                     print("LaserCutter is On.")
             else:
                 if lasercutter_state == True:
                     lasercutter_state = False
                     blast_gate_close()
-                    time_string_last_end = datetime.datetime.now().time().strftime('%H:%M:%S')
+#                    time_string_last_end = datetime.datetime.now().time().strftime('%H:%M:%S')
+                    time_string_last_end = dt.now().time().strftime('%H:%M:%S')
                     print("LaserCutter is Off.")
 
             # Process key presses & menu changes here.
@@ -364,12 +371,12 @@ def parent():
             elif menu_current == 4:
                      lcd_1.set_xy(20, 0)
                      if lasercutter_state == True:
-                         print("111", datetime.datetime.now())
-                         print("222", datetime.datetime.strptime(time_string_last_start,'%H:%M:%S'))
-                         time_string_elasped_time = datetime.datetime.now() - datetime.datetime.strptime(time_string_last_start,'%H:%M:%S')
+                         print("111", dt.now().time().strftime('%H:%M:%S'))
+                         print("222", time_string_last_start)
+                         print("333", dt.strptime(time_string_last_start,'%H:%M:%S'))
+                         time_string_elasped_time = dt.strptime(dt.now().time().strftime('%H:%M:%S'), '%H:%M:%S') - dt.strptime(time_string_last_start,'%H:%M:%S')
                      else:
-                         time_string_elasped_time = datetime.datetime.strptime(time_string_last_end, '%H:%M:%S') - datetime.datetime.strptime(time_string_last_start,'%H:%M:%S')
-#                         time_string_elasped_time = time_string_last_end - time_string_last_start
+                         time_string_elasped_time = dt.strptime(time_string_last_end, '%H:%M:%S') - dt.strptime(time_string_last_start,'%H:%M:%S')
                      str_elasped_time = str(time_string_elasped_time)
                      lcd_1.stream(str_elasped_time)
                      lcd_1.set_xy(20, 1)
