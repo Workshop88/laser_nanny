@@ -208,6 +208,29 @@ def parent():
     }
     menu_current = 1
 
+    # Open file and read any history.
+    f = open('/home/pi/git/laser_nanny/laser_nanny.log','r')
+    # Go to end of file.
+    f.seek(0,2)
+    line_last = f.readline()
+    print("line_last:",line_last)
+    # Go to beginning of file.
+    f.seek(0)
+    line = f.readline()
+    print("line:", line)
+    while (line <> line_last):
+        print("line:", line)
+        # Sort on and off events and accumulate total on time.
+        field_file = line.strip().split(",")
+        print("field_file:", field_file[0], field_file[1])
+        if field_file[0] == "on":
+#            time_string_last_start = dt.strptime(field_file[1].strip(),'%H:%M:%S')
+            time_string_last_start = field_file[1].strip()
+        elif field_file[0] == "off":
+#            time_string_last_end = dt.strptime(field_file[1].strip(),'%H:%M:%S')
+            time_string_last_end = field_file[1].strip()
+        line = f.readline()
+                
     # Initialize LCD.
     lcd_1 = lcd.CharLCD(40, 4, drv, 0, 0)
     lcd_1.init()
@@ -235,8 +258,8 @@ def parent():
     seconds = dt.now()
     seconds_interval = seconds + datetime.timedelta(seconds = 10)
     # rbf  Should get these from history file.
-    time_string_last_start = dt.now().time().strftime('%H:%M:%S')
-    time_string_last_end = dt.now().time().strftime('%H:%M:%S')
+#    time_string_last_start = dt.now().time().strftime('%H:%M:%S')
+#    time_string_last_end = dt.now().time().strftime('%H:%M:%S')
 
     print seconds
     print seconds_interval
@@ -249,9 +272,7 @@ def parent():
     try:
         while True:
             time_string = dt.now().time().strftime('%H:%M:%S')
-#            time_string = dt.now().time().strftime('%Y-%m-%d %H:%M:%S')
             date_string = dt.now().date().strftime('%Y-%m-%d')
-#            seconds = datetime.datetime.now()
             seconds = dt.now()
             timestamp = int(time.mktime(dt.now().timetuple()))
             print("timestamp:", timestamp)
@@ -270,14 +291,12 @@ def parent():
                 if lasercutter_state == False:
                     lasercutter_state = True
                     blast_gate_open()
-#                    time_string_last_start = datetime.datetime.now().time().strftime('%H:%M:%S')
                     time_string_last_start = dt.now().time().strftime('%H:%M:%S')
                     print("LaserCutter is On.")
             else:
                 if lasercutter_state == True:
                     lasercutter_state = False
                     blast_gate_close()
-#                    time_string_last_end = datetime.datetime.now().time().strftime('%H:%M:%S')
                     time_string_last_end = dt.now().time().strftime('%H:%M:%S')
                     print("LaserCutter is Off.")
 
@@ -289,7 +308,6 @@ def parent():
                 print("Before:",menu_current)
                 item =  "Menu"+"{:03n}".format(menu_current)+"Item"+"{:03n}".format(key_value)
                 item_save_for_later = item
-#                print("using key:", item)
                 if item in menus:
                     menu_current = menus.get(item)[1]
                 else:
