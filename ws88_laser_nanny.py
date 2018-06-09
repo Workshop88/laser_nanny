@@ -188,9 +188,9 @@ def parent():
 
         # Status.
         'Menu004Type':'Menu',
-        'Menu004Item001':("Elasped On Time:", 4, null_function),
-        'Menu004Item002':("On Time Stamp:", 4, null_function),
-        'Menu004Item003':("Off Time Stamp:", 4, null_function),
+        'Menu004Item001':("Time On:", 4, null_function),
+        'Menu004Item002':("Total Time On:", 4, null_function),
+        'Menu004Item003':("Last Time Stamp:", 4, null_function),
         'Menu004Item004':("Back", 2, null_function),
 
         # Settings.
@@ -209,6 +209,7 @@ def parent():
     menu_current = 1
 
     # Open file and read any history.
+    time_string_elasped_total = dt.strptime('00:00:00', '%H:%M:%S')
     f = open('/home/pi/git/laser_nanny/laser_nanny.log','r')
     # Go to end of file.
     f.seek(0,2)
@@ -229,6 +230,9 @@ def parent():
         elif field_file[0] == "off":
 #            time_string_last_end = dt.strptime(field_file[1].strip(),'%H:%M:%S')
             time_string_last_end = field_file[1].strip()
+            time_string_elasped_time = dt.strptime(time_string_last_end, '%H:%M:%S') - dt.strptime(time_string_last_start, '%H:%M:%S')
+            print("time_string_elasped_time:", time_string_elasped_time)
+            time_string_elasped_total = time_string_elasped_total + time_string_elasped_time
         line = f.readline()
                 
     # Initialize LCD.
@@ -257,9 +261,6 @@ def parent():
 
     seconds = dt.now()
     seconds_interval = seconds + datetime.timedelta(seconds = 10)
-    # rbf  Should get these from history file.
-#    time_string_last_start = dt.now().time().strftime('%H:%M:%S')
-#    time_string_last_end = dt.now().time().strftime('%H:%M:%S')
 
     print seconds
     print seconds_interval
@@ -398,9 +399,13 @@ def parent():
                      str_elasped_time = str(time_string_elasped_time)
                      lcd_1.stream(str_elasped_time)
                      lcd_1.set_xy(20, 1)
-                     lcd_1.stream(time_string_last_start)
+#                     lcd_1.stream(dt.strptime(time_string_elasped_total, '%H:%M:%S'))
+                     lcd_1.stream(time_string_elasped_total.strftime('%H:%M:%S'))
                      lcd_1.set_xy(20, 2)
-                     lcd_1.stream(time_string_last_end)
+                     if lasercutter_state == True:
+                         lcd_1.stream(time_string_last_end)
+                     else:
+                         lcd_1.stream(time_string_last_start)
                      lcd_update = True
 
 
