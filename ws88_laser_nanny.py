@@ -74,6 +74,8 @@ keypad = factory.create_keypad(keypad=KEYPAD, row_pins=ROW_PINS, col_pins=COL_PI
 global key_value
 global key_press
 
+global next_time_report_index
+
 url = os.environ["URL_SERVER"]
 
 # Need to set an initial value of no key press.
@@ -188,9 +190,9 @@ def parent():
 
         # Status.
         'Menu004Type':'Menu',
-        'Menu004Item001':("Time On:", 4, null_function),
-        'Menu004Item002':("Total Time On:", 4, null_function),
-        'Menu004Item003':("Last Time Stamp:", 4, null_function),
+        'Menu004Item001':("Time On:", 4, time_on_report_function),
+        'Menu004Item002':("Next Time Stamp:", 4, next_time_report_function),
+        'Menu004Item003':("Last Time Stamp:", 4, last_time_report_function),
         'Menu004Item004':("Back", 2, null_function),
 
         # Settings.
@@ -258,6 +260,12 @@ def parent():
     lcd_update = False
     web_update = False
     lasercutter_state = False
+
+    global time_on_report_function_flag
+    time_on_report_function_flag = True
+
+    global next_time_report_index
+    next_time_report_index = 0
 
     seconds = dt.now()
     seconds_interval = seconds + datetime.timedelta(seconds = 10)
@@ -389,18 +397,32 @@ def parent():
                      lcd_update = True
             elif menu_current == 4:
                      lcd_1.set_xy(20, 0)
-                     if lasercutter_state == True:
-                         print("111", dt.now().time().strftime('%H:%M:%S'))
-                         print("222", time_string_last_start)
-                         print("333", dt.strptime(time_string_last_start,'%H:%M:%S'))
-                         time_string_elasped_time = dt.strptime(dt.now().time().strftime('%H:%M:%S'), '%H:%M:%S') - dt.strptime(time_string_last_start,'%H:%M:%S')
+                     # Decide if reporting current interval time or total time.
+                     if time_on_report_function_flag == True:
+                         # Report current interval time.
+                         if lasercutter_state == True:
+                             # Laser cutter is on so report now_time - start_time.
+                             print("111", dt.now().time().strftime('%H:%M:%S'))
+                             print("222", time_string_last_start)
+                             print("333", dt.strptime(time_string_last_start,'%H:%M:%S'))
+                             time_string_elasped_time = dt.strptime(dt.now().time().strftime('%H:%M:%S'), '%H:%M:%S') - dt.strptime(time_string_last_start,'%H:%M:%S')
+                         else:
+                             # Laser cutter is off so report off_time - start_time.
+                             time_string_elasped_time = dt.strptime(time_string_last_end, '%H:%M:%S') - dt.strptime(time_string_last_start,'%H:%M:%S')
                      else:
-                         time_string_elasped_time = dt.strptime(time_string_last_end, '%H:%M:%S') - dt.strptime(time_string_last_start,'%H:%M:%S')
+                         # Report tital time.
+                         time_stirng_elasped_time = time_string_elasped_total
                      str_elasped_time = str(time_string_elasped_time)
                      lcd_1.stream(str_elasped_time)
                      lcd_1.set_xy(20, 1)
 #                     lcd_1.stream(dt.strptime(time_string_elasped_total, '%H:%M:%S'))
-                     lcd_1.stream(time_string_elasped_total.strftime('%H:%M:%S'))
+#                     lcd_1.stream(time_string_elasped_total.strftime('%H:%M:%S'))
+ 
+                     if next_time_report_index == 0:
+                         lcd_1.stream("Current Interval")
+                     else:
+                         str_interval_time = "Looking Back " + str(next_time_report_index) + " Intervals"
+                         lcd_1.stream(str_interval_time)
                      lcd_1.set_xy(20, 2)
                      if lasercutter_state == True:
                          lcd_1.stream(time_string_last_end)
@@ -455,6 +477,27 @@ def blast_gate_close():
 
 def push_report_to_web():
     web_update = True
+
+def time_on_report_function():
+    global time_on_report_function_flag
+    if time_on_report_function_flag == True:
+        time_on_report_function_flag = False
+    else:
+        time_on_report_function_flag = True
+
+def last_time_report_function():
+    global next_time_report_index
+    if next_time_report_index < 10:
+        next_time_report_index = next_time_report_index + 1
+    else:
+        next_time_report_index = 10
+
+def next_time_report_function():
+    global next_time_report_index
+    if next_time_report_index > 0:
+        next_time_report_index = next_time_report_index - 1
+    else:
+        next_time_report_index = 0
 
 # This function should never be called.
 def null_function():
