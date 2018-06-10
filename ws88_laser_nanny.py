@@ -402,17 +402,16 @@ def parent():
                          # Report current interval time.
                          if lasercutter_state == True:
                              # Laser cutter is on so report now_time - start_time.
-                             print("111", dt.now().time().strftime('%H:%M:%S'))
-                             print("222", time_string_last_start)
-                             print("333", dt.strptime(time_string_last_start,'%H:%M:%S'))
                              time_string_elasped_time = dt.strptime(dt.now().time().strftime('%H:%M:%S'), '%H:%M:%S') - dt.strptime(time_string_last_start,'%H:%M:%S')
+                             str_elasped_time = "(Current) "+str(time_string_elasped_time)
                          else:
                              # Laser cutter is off so report off_time - start_time.
                              time_string_elasped_time = dt.strptime(time_string_last_end, '%H:%M:%S') - dt.strptime(time_string_last_start,'%H:%M:%S')
+                             str_elasped_time = "(Last Time) "+str(time_string_elasped_time)
                      else:
-                         # Report tital time.
+                         # Report total time.
                          time_stirng_elasped_time = time_string_elasped_total
-                     str_elasped_time = str(time_string_elasped_time)
+                         str_elasped_time = "(Total) "+str(time_string_elasped_time)
                      lcd_1.stream(str_elasped_time)
                      lcd_1.set_xy(20, 1)
 #                     lcd_1.stream(dt.strptime(time_string_elasped_total, '%H:%M:%S'))
@@ -421,7 +420,7 @@ def parent():
                      if next_time_report_index == 0:
                          lcd_1.stream("Current Interval")
                      else:
-                         str_interval_time = "Looking Back " + str(next_time_report_index) + " Intervals"
+                         str_interval_time = "Back " + str(next_time_report_index) + " Intervals"
                          lcd_1.stream(str_interval_time)
                      lcd_1.set_xy(20, 2)
                      if lasercutter_state == True:
