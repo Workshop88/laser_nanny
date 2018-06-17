@@ -71,11 +71,6 @@ factory = rpi_gpio.KeypadFactory()
 
 keypad = factory.create_keypad(keypad=KEYPAD, row_pins=ROW_PINS, col_pins=COL_PINS)
 
-global key_value
-global key_press
-
-global next_time_report_index
-
 url = os.environ["URL_SERVER"]
 
 # Need to set an initial value of no key press.
@@ -151,6 +146,7 @@ def child():
 def parent():
     global key_value
     global key_press
+    global blast_gate_state_open
 
     drv = Gpio()
     drv.pins = {
@@ -211,7 +207,8 @@ def parent():
     menu_current = 1
 
     # Open file and read any history.
-    time_string_elasped_total = dt.strptime('00:00:00', '%H:%M:%S')
+    # Initialize elapsed time to zero
+    datetime_elasped_total = dt.strptime('00:00:00', '%H:%M:%S')
     f = open('/home/pi/git/laser_nanny/laser_nanny.log','r')
     # Go to end of file.
     f.seek(0,2)
@@ -227,14 +224,12 @@ def parent():
         field_file = line.strip().split(",")
         print("field_file:", field_file[0], field_file[1])
         if field_file[0] == "on":
-#            time_string_last_start = dt.strptime(field_file[1].strip(),'%H:%M:%S')
-            time_string_last_start = field_file[1].strip()
+            datetime_last_start = dt.strptime(field_file[1].strip(),'%H:%M:%S')
         elif field_file[0] == "off":
-#            time_string_last_end = dt.strptime(field_file[1].strip(),'%H:%M:%S')
-            time_string_last_end = field_file[1].strip()
-            time_string_elasped_time = dt.strptime(time_string_last_end, '%H:%M:%S') - dt.strptime(time_string_last_start, '%H:%M:%S')
-            print("time_string_elasped_time:", time_string_elasped_time)
-            time_string_elasped_total = time_string_elasped_total + time_string_elasped_time
+            datetime_last_end = dt.strptime(field_file[1].strip(),'%H:%M:%S')
+            datetime_elasped_time = datetime_last_end - datetime_last_start
+            print("datetime_elasped_time:", datetime_elasped_time)
+            datetime_elasped_total = datetime_elasped_total + datetime_elasped_time
         line = f.readline()
                 
     # Initialize LCD.
@@ -260,6 +255,7 @@ def parent():
     lcd_update = False
     web_update = False
     lasercutter_state = False
+    blast_gate_state_open = False
 
     global time_on_report_function_flag
     time_on_report_function_flag = True
@@ -284,9 +280,9 @@ def parent():
             date_string = dt.now().date().strftime('%Y-%m-%d')
             seconds = dt.now()
             timestamp = int(time.mktime(dt.now().timetuple()))
-            print("timestamp:", timestamp)
+#            print("timestamp:", timestamp)
             now = dt.fromtimestamp(timestamp)
-            print("now:", now)
+#            print("now:", now)
             if seconds > seconds_interval:
                 seconds_interval = seconds + datetime.timedelta(seconds = 10)
                 web_update = True
@@ -300,13 +296,13 @@ def parent():
                 if lasercutter_state == False:
                     lasercutter_state = True
                     blast_gate_open()
-                    time_string_last_start = dt.now().time().strftime('%H:%M:%S')
+                    datetime_last_start = dt.now().time().strftime('%H:%M:%S')
                     print("LaserCutter is On.")
             else:
                 if lasercutter_state == True:
                     lasercutter_state = False
                     blast_gate_close()
-                    time_string_last_end = dt.now().time().strftime('%H:%M:%S')
+                    datetime_last_end = dt.now().time().strftime('%H:%M:%S')
                     print("LaserCutter is Off.")
 
             # Process key presses & menu changes here.
@@ -373,6 +369,9 @@ def parent():
                         read_list.remove(s)
 
             # Manage dynamic LCD information.
+            # 
+            # Top Page.
+            # 
             if menu_current == 1:
                 # Manage reporting temperature on LCD.
                  if temperature_sensor_1_change == True:
@@ -393,8 +392,29 @@ def parent():
                      lcd_update = True
                  else:
                      lcd_1.set_xy(20, 3)
-                     lcd_1.stream("Close")
+                     if(blast_gate_state_open == True):
+                         lcd_1.stream("Open")
+                     else:
+                         lcd_1.stream("Close")
                      lcd_update = True
+            # 
+            # Manual Control Page.
+            # 
+            elif menu_current == 3:
+                     if(blast_gate_state_open == True):
+                         lcd_1.set_xy(20, 0)
+                         lcd_1.stream("<===")
+                         lcd_1.set_xy(20, 1)
+                         lcd_1.stream("    ")
+                     else:
+                         lcd_1.set_xy(20, 0)
+                         lcd_1.stream("    ")
+                         lcd_1.set_xy(20, 1)
+                         lcd_1.stream("<===")
+                     lcd_update = True
+            # 
+            # Status Page.
+            # 
             elif menu_current == 4:
                      lcd_1.set_xy(20, 0)
                      # Decide if reporting current interval time or total time.
@@ -402,21 +422,17 @@ def parent():
                          # Report current interval time.
                          if lasercutter_state == True:
                              # Laser cutter is on so report now_time - start_time.
-                             time_string_elasped_time = dt.strptime(dt.now().time().strftime('%H:%M:%S'), '%H:%M:%S') - dt.strptime(time_string_last_start,'%H:%M:%S')
-                             str_elasped_time = "(Current) "+str(time_string_elasped_time)
+                             datetime_elasped_time = dt.now().time() - datetime_last_start
+                             str_elasped_time = "(Current) "+str(datetime_elasped_time)
                          else:
                              # Laser cutter is off so report off_time - start_time.
-                             time_string_elasped_time = dt.strptime(time_string_last_end, '%H:%M:%S') - dt.strptime(time_string_last_start,'%H:%M:%S')
-                             str_elasped_time = "(Last Time) "+str(time_string_elasped_time)
+                             datetime_elasped_time = datetime_last_end - datetime_last_start
+                             str_elasped_time = "(Last Time) "+str(datetime_elasped_time)
                      else:
                          # Report total time.
-                         time_stirng_elasped_time = time_string_elasped_total
-                         str_elasped_time = "(Total) "+str(time_string_elasped_time)
+                         str_elasped_time = "(Total) "+str(datetime_elasped_total.strftime('%H:%M:%S'))
                      lcd_1.stream(str_elasped_time)
                      lcd_1.set_xy(20, 1)
-#                     lcd_1.stream(dt.strptime(time_string_elasped_total, '%H:%M:%S'))
-#                     lcd_1.stream(time_string_elasped_total.strftime('%H:%M:%S'))
- 
                      if next_time_report_index == 0:
                          lcd_1.stream("Current Interval")
                      else:
@@ -424,9 +440,9 @@ def parent():
                          lcd_1.stream(str_interval_time)
                      lcd_1.set_xy(20, 2)
                      if lasercutter_state == True:
-                         lcd_1.stream(time_string_last_end)
+                         lcd_1.stream(datetime_last_end.strftime('%H:%M:%S'))
                      else:
-                         lcd_1.stream(time_string_last_start)
+                         lcd_1.stream(datetime_last_start.strftime('%H:%M:%S'))
                      lcd_update = True
 
 
@@ -455,7 +471,8 @@ def parent():
 
 # Function to open blast gate.
 def blast_gate_open():
-    print("Code to open blast gate goes here.")
+    global blast_gate_state_open
+    blast_gate_state_open = True
     servo_blast_gate = GPIO.PWM(18, 50)
     for i in range(1, 20):
         # Where argument is the duty cycle (0.0 <= duty cycle <= 100.0)
@@ -465,7 +482,8 @@ def blast_gate_open():
 
 # Function to close blast gate.
 def blast_gate_close():
-    print("Code to close blast gate goes here.")
+    global blast_gate_state_open
+    blast_gate_state_open = False
     servo_blast_gate = GPIO.PWM(18, 50)
     for i in range(1, 20):
         # Where argument is the duty cycle (0.0 <= duty cycle <= 100.0)
