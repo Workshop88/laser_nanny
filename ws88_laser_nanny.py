@@ -209,14 +209,14 @@ def parent():
     # Open file and read any history.
     # Initialize elapsed time to zero
     datetime_elasped_total = dt.strptime('00:00:00', '%H:%M:%S')
-    f = open('/home/pi/git/laser_nanny/laser_nanny.log','r')
+    file = open('/home/pi/git/laser_nanny/laser_nanny.log','r')
     # Go to end of file.
-    f.seek(0,2)
-    line_last = f.readline()
+    file.seek(0,2)
+    line_last = file.readline()
     print("line_last:",line_last)
     # Go to beginning of file.
-    f.seek(0)
-    line = f.readline()
+    file.seek(0)
+    line = file.readline()
     print("line:", line)
     while (line <> line_last):
         print("line:", line)
@@ -230,7 +230,8 @@ def parent():
             datetime_elasped_time = datetime_last_end - datetime_last_start
             print("datetime_elasped_time:", datetime_elasped_time)
             datetime_elasped_total = datetime_elasped_total + datetime_elasped_time
-        line = f.readline()
+        line = file.readline()
+    file.close()
                 
     # Initialize LCD.
     lcd_1 = lcd.CharLCD(40, 4, drv, 0, 0)
@@ -280,9 +281,7 @@ def parent():
             date_string = dt.now().date().strftime('%Y-%m-%d')
             seconds = dt.now()
             timestamp = int(time.mktime(dt.now().timetuple()))
-#            print("timestamp:", timestamp)
             now = dt.fromtimestamp(timestamp)
-#            print("now:", now)
             if seconds > seconds_interval:
                 seconds_interval = seconds + datetime.timedelta(seconds = 10)
                 web_update = True
@@ -291,21 +290,34 @@ def parent():
             lcd_1.set_xy(30, 3)
             lcd_1.stream(date_string)
 
+            #
             # Process LaserCutter power On/Off here.
+            #
             if GPIO.input(17) == True:
                 if lasercutter_state == False:
                     lasercutter_state = True
                     blast_gate_open()
-                    datetime_last_start = dt.now().time().strftime('%H:%M:%S')
+#                    datetime_last_start = dt.now().time().strftime('%H:%M:%S')
+                    datetime_last_start = dt.now().time()
+                    # Write on time stap to file.
+                    file = open('/home/pi/git/laser_nanny/laser_nanny.log','a')
+                    file.write('on, '+str(datetime_last_start.strftime('%H:%M:%S'))+'\r')
+                    file.close()
                     print("LaserCutter is On.")
             else:
                 if lasercutter_state == True:
                     lasercutter_state = False
                     blast_gate_close()
-                    datetime_last_end = dt.now().time().strftime('%H:%M:%S')
+                    datetime_last_end = dt.now().time()
+                    # Write off time stap to file.
+                    file = open('/home/pi/git/laser_nanny/laser_nanny.log','a')
+                    file.write('off, '+str(datetime_last_end.strftime('%H:%M:%S'))+'\r')
+                    file.close()
                     print("LaserCutter is Off.")
 
+            #
             # Process key presses & menu changes here.
+            #
             if key_press == True:
                 # Clear out the keypress flag.
                 key_press = False
@@ -333,7 +345,6 @@ def parent():
                             lcd_1.stream(menus.get(item)[0])
                 lcd_update = True
                 # Call function if there is one.
-#                item =  "Menu"+"{:03n}".format(menu_current)+"Item"+"{:03n}".format(key_value)
                 if item_save_for_later in menus:
                     if menus.get(item_save_for_later)[2] != null_function:
                         print("===>", item_save_for_later)
@@ -341,9 +352,11 @@ def parent():
                         menus.get(item_save_for_later)[2]()
                 
 
+            #
             # Check for new temperature data.  This only blocks for 1/10 of a second.
             # The "0.1" is the 100ms timeout.  We only wait 1/10 of a second then
             # proceed to other things.
+            #
             readable, writable, errored = select.select(read_list, [], [], 0.1)
             for s in readable:
             ### rbf   Don't think this is necesssary ###            s.setblocking(0)
@@ -368,6 +381,7 @@ def parent():
                         s.close()
                         read_list.remove(s)
 
+            #
             # Manage dynamic LCD information.
             # 
             # Top Page.
@@ -446,18 +460,20 @@ def parent():
                      lcd_update = True
 
 
+            #
             # Only update the LCD here to save time.
+            #
             if lcd_update:
                 lcd_update = False
                 lcd_1.flush()
 
+            #
             #  Manage reporting temperature on web page.
+            #
             if web_update:
                 web_update = False
                 data_string = temperature_sensor_1+','+temperature_sensor_2+','+time_string
-#                data_string = "temp1="+temperature_sensor_1+"&temp2="+temperature_sensor_2
                 data = urllib.urlencode({'feed_name':data_string})
-#                data = urllib.unquote({'feed_name':data_string})
                 full_url = url + '?' + data
                 print("url:", full_url)
                 response = urllib2.urlopen(full_url)
@@ -469,7 +485,9 @@ def parent():
         GPIO.cleanup()
         sys.exit()
 
+#
 # Function to open blast gate.
+#
 def blast_gate_open():
     global blast_gate_state_open
     blast_gate_state_open = True
@@ -480,7 +498,9 @@ def blast_gate_open():
         time.sleep(.03)
     servo_blast_gate.stop()
 
+#
 # Function to close blast gate.
+#
 def blast_gate_close():
     global blast_gate_state_open
     blast_gate_state_open = False
