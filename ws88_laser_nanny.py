@@ -224,9 +224,9 @@ def parent():
         field_file = line.strip().split(",")
         print("field_file:", field_file[0], field_file[1])
         if field_file[0] == "on":
-            datetime_last_start = dt.strptime(field_file[1].strip(),'%H:%M:%S')
+            datetime_last_start = dt.strptime(field_file[1].strip(), '%Y-%m-%d %H:%M:%S')
         elif field_file[0] == "off":
-            datetime_last_end = dt.strptime(field_file[1].strip(),'%H:%M:%S')
+            datetime_last_end = dt.strptime(field_file[1].strip(),'%Y-%m-%d %H:%M:%S')
             datetime_elasped_time = datetime_last_end - datetime_last_start
             print("datetime_elasped_time:", datetime_elasped_time)
             datetime_elasped_total = datetime_elasped_total + datetime_elasped_time
@@ -297,21 +297,20 @@ def parent():
                 if lasercutter_state == False:
                     lasercutter_state = True
                     blast_gate_open()
-#                    datetime_last_start = dt.now().time().strftime('%H:%M:%S')
-                    datetime_last_start = dt.now().time()
+                    datetime_last_start = dt.now()
                     # Write on time stap to file.
                     file = open('/home/pi/git/laser_nanny/laser_nanny.log','a')
-                    file.write('on, '+str(datetime_last_start.strftime('%H:%M:%S'))+'\r')
+                    file.write('on, '+str(datetime_last_start.strftime('%Y-%m-%d %H:%M:%S'))+'\n')
                     file.close()
                     print("LaserCutter is On.")
             else:
                 if lasercutter_state == True:
                     lasercutter_state = False
                     blast_gate_close()
-                    datetime_last_end = dt.now().time()
+                    datetime_last_end = dt.now()
                     # Write off time stap to file.
                     file = open('/home/pi/git/laser_nanny/laser_nanny.log','a')
-                    file.write('off, '+str(datetime_last_end.strftime('%H:%M:%S'))+'\r')
+                    file.write('off, '+str(datetime_last_end.strftime('%Y-%m-%d %H:%M:%S'))+'\n')
                     file.close()
                     print("LaserCutter is Off.")
 
@@ -436,7 +435,7 @@ def parent():
                          # Report current interval time.
                          if lasercutter_state == True:
                              # Laser cutter is on so report now_time - start_time.
-                             datetime_elasped_time = dt.now().time() - datetime_last_start
+                             datetime_elasped_time = dt.now() - datetime_last_start
                              str_elasped_time = "(Current) "+str(datetime_elasped_time)
                          else:
                              # Laser cutter is off so report off_time - start_time.
