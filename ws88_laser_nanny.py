@@ -153,6 +153,10 @@ def parent():
     global blast_gate_state_open
     global history
     global temper_probe_1_active
+    global temper_probe_1_switch_average
+    global temper_probe_2_switch_average
+    global temper_probe_1_switch_events
+    global temper_probe_2_switch_events
 
     drv = Gpio()
     drv.pins = {
@@ -208,9 +212,9 @@ def parent():
 
         # Status temperature.
         'Menu006Type':'Menu',
-        'Menu006Item001':("Temperature ", 6, temper_probe_switch),
-        'Menu006Item002':("Max:", 6, null_function),
-        'Menu006Item003':("Min:", 6, null_function),
+        'Menu006Item001':("Temperature:", 6, temper_probe_switch),
+        'Menu006Item002':("Average:", 6, temper_probe_switch_average),
+        'Menu006Item003':("Events:", 6, temper_probe_switch_events),
         'Menu006Item004':("Back", 4, null_function),
 
         # Settings.
@@ -228,6 +232,12 @@ def parent():
         'Menu008Item004':("", 2, null_function),
     }
     menu_current = 1
+
+    # Initialize first run flags before reading in files as
+    # history may change these flag's states.
+    temperature_sensor_first_run = True
+    temperature_sensor_1_first_run = True
+    temperature_sensor_2_first_run = True
 
     # Open file and read any history.
     # Initialize elapsed time to zero
@@ -303,6 +313,18 @@ def parent():
     temperature_sensor_1_change = False
     temperature_sensor_2_change = False
     temper_probe_1_active = True
+    temper_probe_1_switch_average = 0
+    temper_probe_2_switch_average = 0
+    temper_probe_1_switch_events = 0
+    temper_probe_2_switch_events = 0
+    temperature_sensor_1_long_term_average = 0
+    temperature_sensor_2_long_term_average = 0
+    temperature_sensor_1_short_term_average = 0
+    temperature_sensor_2_short_term_average = 0
+    temperature_sensor_1_max_all_time= 0
+    temperature_sensor_2_max_all_time= 0
+    temperature_sensor_1_min_all_time= 0
+    temperature_sensor_2_min_all_time= 0
 
     try:
         while True:
@@ -314,10 +336,6 @@ def parent():
             if seconds > seconds_interval:
                 seconds_interval = seconds + datetime.timedelta(seconds = 10)
                 web_update = True
-            lcd_1.set_xy(32, 2)
-            lcd_1.stream(time_string)
-            lcd_1.set_xy(30, 3)
-            lcd_1.stream(date_string)
 
             #
             # Process LaserCutter power On/Off here.
@@ -410,35 +428,99 @@ def parent():
                         read_list.remove(s)
 
             #
+            # Analyz temperature date.
+            # 
+            # Calculate long term moving average.
+            if temperature_sensor_1_change == True:
+                # Initialize long term average if this is the initial pass.
+                if temperature_sensor_1_first_run == True:
+                    temperature_sensor_1_long_term_average = float(temperature_sensor_1) * 1024
+                    temperature_sensor_1_max_all_time = float(temperature_sensor_1)
+                    temperature_sensor_1_min_all_time = float(temperature_sensor_1)
+                else:
+                    temperature_sensor_1_long_term_average = temperature_sensor_1_long_term_average - (temperature_sensor_1_long_term_average / 1024)
+                    temperature_sensor_1_long_term_average = temperature_sensor_1_long_term_average + float(temperature_sensor_1)
+            if temperature_sensor_2_change == True:
+                # Initialize long term average if this is the initial pass.
+                if temperature_sensor_2_first_run == True:
+                    temperature_sensor_2_long_term_average = float(temperature_sensor_2) * 1024
+                    temperature_sensor_2_max_all_time = float(temperature_sensor_1)
+                    temperature_sensor_2_min_all_time = float(temperature_sensor_1)
+                else:
+                    temperature_sensor_2_long_term_average = temperature_sensor_2_long_term_average - (temperature_sensor_2_long_term_average / 1024)
+                    temperature_sensor_2_long_term_average = temperature_sensor_2_long_term_average + float(temperature_sensor_2)
+            # Calculate short term moving average.
+            if temperature_sensor_1_change == True:
+                # Initialize short term average if this is the initial pass.
+                if temperature_sensor_1_first_run == True:
+                    temperature_sensor_1_short_term_average = float(temperature_sensor_1) * 32
+                else:
+                    temperature_sensor_1_short_term_average = temperature_sensor_1_short_term_average - (temperature_sensor_1_short_term_average / 32)
+                    temperature_sensor_1_short_term_average = temperature_sensor_1_short_term_average + float(temperature_sensor_1)
+            if temperature_sensor_2_change == True:
+                # Initialize short term average if this is the initial pass.
+                if temperature_sensor_2_first_run == True:
+                    temperature_sensor_2_short_term_average = float(temperature_sensor_2) * 32
+                else:
+                    temperature_sensor_2_short_term_average = temperature_sensor_2_short_term_average - (temperature_sensor_2_short_term_average / 32)
+                    temperature_sensor_2_short_term_average = temperature_sensor_2_short_term_average + float(temperature_sensor_2)
+            # Calculate min and max temperatures.
+            if temperature_sensor_1_change == True:
+                # Initialize max and min if this is the initial pass.
+                if temperature_sensor_1_first_run == True:
+                    temperature_sensor_1_max_all_time = float(temperature_sensor_1)
+                    temperature_sensor_1_min_all_time = float(temperature_sensor_1)
+                else:
+                    if temperature_sensor_1_max_all_time < float(temperature_sensor_1):
+                        temperature_sensor_1_max_all_time = float(temperature_sensor_1)
+                    if temperature_sensor_1_min_all_time > float(temperature_sensor_1):
+                        temperature_sensor_1_min_all_time = float(temperature_sensor_1)
+            if temperature_sensor_2_change == True:
+                # Initialize max and min if this is the initial pass.
+                if temperature_sensor_2_first_run == True:
+                    temperature_sensor_2_max_all_time = float(temperature_sensor_2)
+                    temperature_sensor_2_min_all_time = float(temperature_sensor_2)
+                else:
+                    if temperature_sensor_2_max_all_time < float(temperature_sensor_2):
+                        temperature_sensor_2_max_all_time = float(temperature_sensor_2)
+                    if temperature_sensor_2_min_all_time > float(temperature_sensor_2):
+                        temperature_sensor_2_min_all_time = float(temperature_sensor_2)
+
+
+            #
             # Manage dynamic LCD information.
             # 
             # Top Page.
             # 
             if menu_current == 1:
                 # Manage reporting temperature on LCD.
-                 if temperature_sensor_1_change == True:
-                     temperature_sensor_1_change = False
-                     print("Sensor 1: " + data_list[1])
-                     lcd_1.set_xy(20, 1)
-                     lcd_1.stream(data_list[1])
-                     lcd_update = True
-                 if temperature_sensor_2_change == True:
-                     temperature_sensor_2_change = False
-                     print("Sensor 2: " + data_list[1])
-                     lcd_1.set_xy(20, 2)
-                     lcd_1.stream(data_list[1])
-                     lcd_update = True
-                 if lasercutter_state == True:
-                     lcd_1.set_xy(20, 3)
-                     lcd_1.stream("Open ")
-                     lcd_update = True
-                 else:
-                     lcd_1.set_xy(20, 3)
-                     if(blast_gate_state_open == True):
-                         lcd_1.stream("Open")
-                     else:
-                         lcd_1.stream("Close")
-                     lcd_update = True
+                if temperature_sensor_1_change == True:
+#                     temperature_sensor_1_change = False
+                    print("Sensor 1: " + data_list[1])
+                    lcd_1.set_xy(20, 1)
+                    lcd_1.stream(data_list[1])
+                    lcd_update = True
+                if temperature_sensor_2_change == True:
+#                     temperature_sensor_2_change = False
+                    print("Sensor 2: " + data_list[1])
+                    lcd_1.set_xy(20, 2)
+                    lcd_1.stream(data_list[1])
+                    lcd_update = True
+                if lasercutter_state == True:
+                    lcd_1.set_xy(20, 3)
+                    lcd_1.stream("Open ")
+                    lcd_update = True
+                else:
+                    lcd_1.set_xy(20, 3)
+                    if(blast_gate_state_open == True):
+                        lcd_1.stream("Open")
+                    else:
+                        lcd_1.stream("Close")
+                    lcd_1.set_xy(32, 2)
+                    lcd_1.stream(time_string)
+                    lcd_1.set_xy(30, 3)
+                    lcd_1.stream(date_string)
+                    lcd_update = True
             # 
             # Manual Control Page.
             # 
@@ -490,15 +572,45 @@ def parent():
             # Status Temperature Page.
             # 
             elif menu_current == 6:
+                if temperature_sensor_1_change == True:
+                    lcd_update = True
+                if temperature_sensor_2_change == True:
+                    lcd_update = True
                 lcd_1.set_xy(20, 0)
                 if temper_probe_1_active == True:
-                    lcd_1.stream("Duct Average: "+"123")
+                    lcd_1.stream("Duct: "+str(temperature_sensor_1))
                 else:
-                    lcd_1.stream("Cutter Average: "+"321")
-
-
-
-
+                    lcd_1.stream("Cutter: "+str(temperature_sensor_2))
+                lcd_1.set_xy(20, 1)
+                if temper_probe_1_active == True:
+                    if temper_probe_1_switch_average == 0:
+                        lcd_1.stream("Long Term: "+str(temperature_sensor_1_long_term_average / 1024))
+                    else: 
+                        lcd_1.stream("Short Term: "+str(temperature_sensor_1_short_term_average / 32))
+                else:
+                    if temper_probe_2_switch_average == 0:
+                        lcd_1.stream("Long Term: "+str(temperature_sensor_2_long_term_average / 1024))
+                    else: 
+                        lcd_1.stream("Short Term: "+str(temperature_sensor_2_short_term_average / 32))
+                lcd_1.set_xy(20, 2)
+                if temper_probe_1_active == True:
+                    if temper_probe_1_switch_events == 0:
+                        lcd_1.stream("All Time Max: "+str(temperature_sensor_1_max_all_time))
+                    elif temper_probe_1_switch_events == 1:
+                        lcd_1.stream("All Time Min: "+str(temperature_sensor_1_min_all_time))
+                    elif temper_probe_1_switch_events == 2:
+                        lcd_1.stream("48 Hour Max: "+"n/a")
+                    else: 
+                        lcd_1.stream("48 Hour Min: "+"n/a")
+                else:
+                    if temper_probe_2_switch_events == 0:
+                        lcd_1.stream("All Time Max: "+str(temperature_sensor_2_max_all_time))
+                    elif temper_probe_2_switch_events == 1:
+                        lcd_1.stream("All Time Min: "+str(temperature_sensor_2_min_all_time))
+                    elif temper_probe_2_switch_events == 2:
+                        lcd_1.stream("48 Hour Max: "+"n/a")
+                    else: 
+                        lcd_1.stream("48 Hour Min: "+"n/a")
 
 
 
@@ -520,6 +632,16 @@ def parent():
                 print("url:", full_url)
                 response = urllib2.urlopen(full_url)
                 print full_url
+
+            # End of executive loop.
+            # Clear out any flags that only need to be set once per loop.
+            if temperature_sensor_1_change == True:
+                temperature_sensor_1_first_run = False
+            if temperature_sensor_2_change == True:
+                temperature_sensor_2_first_run = False
+            temperature_sensor_1_change = False
+            temperature_sensor_2_change = False
+            temperature_sensor_first_run = False
 
     # Catch a keyboard ctrl-c and exit cleanly by giving up the GPIO pins.
     except KeyboardInterrupt:
@@ -585,6 +707,32 @@ def temper_probe_switch():
         temper_probe_1_active = False
     else: 
         temper_probe_1_active = True
+
+def temper_probe_switch_average():
+    global temper_probe_1_active
+    global temper_probe_1_switch_average
+    global temper_probe_2_switch_average
+    if temper_probe_1_active == True:
+        temper_probe_1_switch_average = temper_probe_1_switch_average + 1
+        if temper_probe_1_switch_average > 1:
+            temper_probe_1_switch_average = 0
+    else:
+        temper_probe_2_switch_average = temper_probe_2_switch_average + 1
+        if temper_probe_2_switch_average > 1:
+            temper_probe_2_switch_average = 0
+
+def temper_probe_switch_events():
+    global temper_probe_1_active
+    global temper_probe_1_switch_events
+    global temper_probe_2_switch_events
+    if temper_probe_1_active == True:
+        temper_probe_1_switch_events = temper_probe_1_switch_events + 1
+        if temper_probe_1_switch_events > 3:
+            temper_probe_1_switch_events = 0
+    else:
+        temper_probe_2_switch_events = temper_probe_2_switch_events + 1
+        if temper_probe_2_switch_events > 3:
+            temper_probe_2_switch_events = 0
 
 # This function should never be called.
 def null_function():
