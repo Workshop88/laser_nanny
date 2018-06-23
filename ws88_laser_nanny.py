@@ -85,6 +85,9 @@ def printKey(key):
 # printKey will be called each time a keypad button is pressed
 keypad.registerKeyPressHandler(printKey)
 
+#
+# Child program routine.
+#
 def child():
     print("Starting child: ", os.getpid())
 
@@ -141,12 +144,15 @@ def child():
                 os._exit(0)
 ### debug print ###        print(temperature_in_fahrenheit)
 
-
-
+#
+# Parent program routine.
+#
 def parent():
     global key_value
     global key_press
     global blast_gate_state_open
+    global history
+    global temper_probe_1_active
 
     drv = Gpio()
     drv.pins = {
@@ -158,6 +164,9 @@ def parent():
         'DB6': 20,
         'DB7': 21
     }
+
+    # Define history as a list.
+    history=[]
 
     # Initialize LCD menus
     menus = { # key=menu_number+item_number, menu_text, menu_next, function
@@ -173,9 +182,9 @@ def parent():
         'Menu002Type':'Menu',
         'Menu002Item001':("Manual Control", 3, null_function),
         'Menu002Item002':("Status", 4, null_function),
-        'Menu002Item003':("Settings", 5, null_function),
+        'Menu002Item003':("Settings", 7, null_function),
         'Menu002Item004':("Back", 1, null_function),
-        'Menu002Item005':("About", 6, null_function),
+        'Menu002Item005':("About", 8, null_function),
 
         # Manual control.
         'Menu003Type':'Menu',
@@ -184,25 +193,39 @@ def parent():
         'Menu003Item003':("Push report to web", 3, push_report_to_web),
         'Menu003Item004':("Back", 2, null_function),
 
-        # Status.
+        # Status menu.
         'Menu004Type':'Menu',
-        'Menu004Item001':("Time On:", 4, time_on_report_function),
-        'Menu004Item002':("Next Time Stamp:", 4, next_time_report_function),
-        'Menu004Item003':("Last Time Stamp:", 4, last_time_report_function),
-        'Menu004Item004':("Back", 2, null_function),
+        'Menu004Item001':("Time Status", 5, null_function),
+        'Menu004Item002':("Temperature Status:", 6, null_function),
+        'Menu004Item003':("Back", 2, null_function),
+
+        # Status time.
+        'Menu005Type':'Menu',
+        'Menu005Item001':("Time On:", 5, time_on_report_function),
+        'Menu005Item002':("Next Time Stamp:", 5, next_time_report_function),
+        'Menu005Item003':("Last Time Stamp:", 5, last_time_report_function),
+        'Menu005Item004':("Back", 4, null_function),
+
+        # Status temperature.
+        'Menu006Type':'Menu',
+        'Menu006Item001':("Temperature ", 6, temper_probe_switch),
+        'Menu006Item002':("Max:", 6, null_function),
+        'Menu006Item003':("Min:", 6, null_function),
+        'Menu006Item004':("Back", 4, null_function),
 
         # Settings.
-        'Menu005Type':'Menu',
-        'Menu005Item001':("Publish on temp change.", 5, null_function),
-        'Menu005Item002':("Publish on time change.", 5, null_function),
-        'Menu005Item003':("Publish on temp or time change.", 5, null_function),
-        'Menu005Item004':("Back", 2, null_function),
+        'Menu007Type':'Menu',
+        'Menu007Item001':("Publish on temp change.", 7, null_function),
+        'Menu007Item002':("Publish on time change.", 7, null_function),
+        'Menu007Item003':("Publish on temp or time change.", 7, null_function),
+        'Menu007Item004':("Back", 2, null_function),
 
-        'Menu006Type':'Info',
-        'Menu006Item001':("The LaserCutter laser nanny project is ", 2, null_function),
-        'Menu006Item002':("hosted at: https://github.com/Workshop88", 2, null_function),
-        'Menu006Item003':("/laser_nanny", 2, null_function),
-        'Menu006Item004':("", 2, null_function),
+        # About.
+        'Menu008Type':'Info',
+        'Menu008Item001':("The LaserCutter laser nanny project is ", 2, null_function),
+        'Menu008Item002':("hosted at: https://github.com/Workshop88", 2, null_function),
+        'Menu008Item003':("/laser_nanny", 2, null_function),
+        'Menu008Item004':("", 2, null_function),
     }
     menu_current = 1
 
@@ -230,9 +253,14 @@ def parent():
             datetime_elasped_time = datetime_last_end - datetime_last_start
             print("datetime_elasped_time:", datetime_elasped_time)
             datetime_elasped_total = datetime_elasped_total + datetime_elasped_time
+            # Grab the last 10 elasped times.
+            history.append(datetime_elasped_time)
+            # rbf Limit size of history to 10 here.
         line = file.readline()
     file.close()
-                
+    # Arrange history sequence.
+    print("length of history: ", len(history))
+                        
     # Initialize LCD.
     lcd_1 = lcd.CharLCD(40, 4, drv, 0, 0)
     lcd_1.init()
@@ -274,6 +302,7 @@ def parent():
 
     temperature_sensor_1_change = False
     temperature_sensor_2_change = False
+    temper_probe_1_active = True
 
     try:
         while True:
@@ -414,49 +443,63 @@ def parent():
             # Manual Control Page.
             # 
             elif menu_current == 3:
-                     if(blast_gate_state_open == True):
-                         lcd_1.set_xy(20, 0)
-                         lcd_1.stream("<===")
-                         lcd_1.set_xy(20, 1)
-                         lcd_1.stream("    ")
-                     else:
-                         lcd_1.set_xy(20, 0)
-                         lcd_1.stream("    ")
-                         lcd_1.set_xy(20, 1)
-                         lcd_1.stream("<===")
-                     lcd_update = True
+                if(blast_gate_state_open == True):
+                    lcd_1.set_xy(20, 0)
+                    lcd_1.stream("<===")
+                    lcd_1.set_xy(20, 1)
+                    lcd_1.stream("    ")
+                else:
+                    lcd_1.set_xy(20, 0)
+                    lcd_1.stream("    ")
+                    lcd_1.set_xy(20, 1)
+                    lcd_1.stream("<===")
+                    lcd_update = True
             # 
-            # Status Page.
+            # Status Time Page.
             # 
-            elif menu_current == 4:
-                     lcd_1.set_xy(20, 0)
-                     # Decide if reporting current interval time or total time.
-                     if time_on_report_function_flag == True:
-                         # Report current interval time.
-                         if lasercutter_state == True:
-                             # Laser cutter is on so report now_time - start_time.
-                             datetime_elasped_time = dt.now() - datetime_last_start
-                             str_elasped_time = "(Current) "+str(datetime_elasped_time)
-                         else:
-                             # Laser cutter is off so report off_time - start_time.
-                             datetime_elasped_time = datetime_last_end - datetime_last_start
-                             str_elasped_time = "(Last Time) "+str(datetime_elasped_time)
-                     else:
-                         # Report total time.
-                         str_elasped_time = "(Total) "+str(datetime_elasped_total.strftime('%H:%M:%S'))
-                     lcd_1.stream(str_elasped_time)
-                     lcd_1.set_xy(20, 1)
-                     if next_time_report_index == 0:
-                         lcd_1.stream("Current Interval")
-                     else:
-                         str_interval_time = "Back " + str(next_time_report_index) + " Intervals"
-                         lcd_1.stream(str_interval_time)
-                     lcd_1.set_xy(20, 2)
-                     if lasercutter_state == True:
-                         lcd_1.stream(datetime_last_end.strftime('%H:%M:%S'))
-                     else:
-                         lcd_1.stream(datetime_last_start.strftime('%H:%M:%S'))
-                     lcd_update = True
+            elif menu_current == 5:
+                lcd_1.set_xy(20, 0)
+                # Decide if reporting current interval time or total time.
+                if time_on_report_function_flag == True:
+                    # Report current interval time.
+                    if lasercutter_state == True:
+                        # Laser cutter is on so report now_time - start_time.
+                        datetime_elasped_time = dt.now() - datetime_last_start
+                        str_elasped_time = "(Current) "+str(datetime_elasped_time)
+                    else:
+                         # Laser cutter is off so report off_time - start_time.
+                         datetime_elasped_time = datetime_last_end - datetime_last_start
+                         str_elasped_time = "(Last Time) "+str(datetime_elasped_time)
+                else:
+                    # Report total time.
+                    str_elasped_time = "(Total) "+str(datetime_elasped_total.strftime('%H:%M:%S'))
+                    lcd_1.stream(str_elasped_time)
+                    lcd_1.set_xy(20, 1)
+                    if next_time_report_index == 0:
+                        lcd_1.stream("Current Interval")
+                    else:
+                        str_interval_time = "Back " + str(next_time_report_index) + " Intervals"
+                        lcd_1.stream(str_interval_time)
+                    lcd_1.set_xy(20, 2)
+                    if lasercutter_state == True:
+                        lcd_1.stream(datetime_last_end.strftime('%H:%M:%S'))
+                    else:
+                        lcd_1.stream(str(history[next_time_report_index]))
+                    lcd_update = True
+            # 
+            # Status Temperature Page.
+            # 
+            elif menu_current == 6:
+                lcd_1.set_xy(20, 0)
+                if temper_probe_1_active == True:
+                    lcd_1.stream("Duct Average: "+"123")
+                else:
+                    lcd_1.stream("Cutter Average: "+"321")
+
+
+
+
+
 
 
             #
@@ -523,10 +566,11 @@ def time_on_report_function():
 
 def last_time_report_function():
     global next_time_report_index
-    if next_time_report_index < 10:
+    global history
+    if next_time_report_index < (len(history) - 1):
         next_time_report_index = next_time_report_index + 1
     else:
-        next_time_report_index = 10
+        next_time_report_index = (len(history) - 1)
 
 def next_time_report_function():
     global next_time_report_index
@@ -534,6 +578,13 @@ def next_time_report_function():
         next_time_report_index = next_time_report_index - 1
     else:
         next_time_report_index = 0
+
+def temper_probe_switch():
+    global temper_probe_1_active
+    if temper_probe_1_active == True:
+        temper_probe_1_active = False
+    else: 
+        temper_probe_1_active = True
 
 # This function should never be called.
 def null_function():
