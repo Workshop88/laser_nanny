@@ -151,7 +151,7 @@ def parent():
     global key_value
     global key_press
     global blast_gate_state_open
-    global history
+    global history_time
     global temper_probe_1_active
     global temper_probe_1_switch_average
     global temper_probe_2_switch_average
@@ -169,8 +169,9 @@ def parent():
         'DB7': 21
     }
 
-    # Define history as a list.
-    history=[]
+    # Define history as lists.
+    history_time=[]
+    history_temperature=[]
 
     # Initialize LCD menus
     menus = { # key=menu_number+item_number, menu_text, menu_next, function
@@ -235,11 +236,13 @@ def parent():
 
     # Initialize first run flags before reading in files as
     # history may change these flag's states.
-    temperature_sensor_first_run = True
+    # Setup for analyzing the 1st sample correctly.
     temperature_sensor_1_first_run = True
     temperature_sensor_2_first_run = True
 
-    # Open file and read any history.
+    #
+    # Open time stamp file and read any history.
+    #
     # Initialize elapsed time to zero
     datetime_elasped_total = dt.strptime('00:00:00', '%H:%M:%S')
     file = open('/home/pi/git/laser_nanny/laser_nanny.log','r')
@@ -264,14 +267,92 @@ def parent():
             print("datetime_elasped_time:", datetime_elasped_time)
             datetime_elasped_total = datetime_elasped_total + datetime_elasped_time
             # Grab the last 10 elasped times.
-            history.insert(0, datetime_elasped_time)
+            history_time.insert(0, datetime_elasped_time)
             # rbf Limit size of history to 10 here.
         line = file.readline()
     file.close()
     # Ignore any on event with missing off events by setting off event to on event datetime.
     datetime_last_end = datetime_last_start
     # Arrange history sequence.
-    print("length of history: ", len(history))
+    print("length of time history: ", len(history_time))
+                        
+    #
+    # Open temperature stamp file and read any history.
+    #
+    file = open('/home/pi/git/laser_nanny/laser_nanny_temperature.log','r')
+    # Go to end of file.
+    file.seek(0,2)
+    line_last = file.readline()
+    print("line_last:",line_last)
+    # Go to beginning of file.
+    file.seek(0)
+    line = file.readline()
+    print("line:", line)
+    while (line <> line_last):
+        print("line:", line)
+        # Sort probe 1 and 2 readings and find max & min and calcualte averages
+        field_file = line.strip().split(",")
+        print("field_file:", field_file[0], field_file[1])
+        if field_file[0] == "1":
+            # Looking for max & min.
+            # Initialize max and min if this is the initial pass.
+            if temperature_sensor_1_first_run == True:
+                temperature_sensor_1_max_all_time = float(field_file[1])
+                temperature_sensor_1_min_all_time = float(field_file[1])
+            else:
+                if temperature_sensor_1_max_all_time < float(field_file[1]):
+                    temperature_sensor_1_max_all_time = float(field_file[1])
+                if temperature_sensor_1_min_all_time > float(field_file[1]):
+                    temperature_sensor_1_min_all_time = float(field_file[1])
+            # Calculating long and short term average.
+            # Initialize long term average if this is the initial pass.
+            if temperature_sensor_1_first_run == True:
+                temperature_sensor_1_long_term_average = float(field_file[1]) * 1024
+            else:
+                temperature_sensor_1_long_term_average = temperature_sensor_1_long_term_average - (temperature_sensor_1_long_term_average / 1024)
+                temperature_sensor_1_long_term_average = temperature_sensor_1_long_term_average + float(field_file[1])
+            # Calculate short term moving average.
+            # Initialize short term average if this is the initial pass.
+            if temperature_sensor_1_first_run == True:
+                temperature_sensor_1_short_term_average = float(field_file[1]) * 32
+            else:
+                temperature_sensor_1_short_term_average = temperature_sensor_1_short_term_average - (temperature_sensor_1_short_term_average / 32)
+                temperature_sensor_1_short_term_average = temperature_sensor_1_short_term_average + float(field_file[1])
+            temperature_sensor_1_first_run = False
+        elif field_file[0] == "2":
+            # Looking for max & min.
+            # Initialize max and min if this is the initial pass.
+            if temperature_sensor_2_first_run == True:
+                temperature_sensor_2_max_all_time = float(field_file[1])
+                temperature_sensor_2_min_all_time = float(field_file[1])
+            else:
+                if temperature_sensor_2_max_all_time < float(field_file[1]):
+                    temperature_sensor_2_max_all_time = float(field_file[1])
+                if temperature_sensor_2_min_all_time > float(field_file[1]):
+                    temperature_sensor_2_min_all_time = float(field_file[1])
+            # Calculating long and short term average.
+            # Initialize long term average if this is the initial pass.
+            if temperature_sensor_2_first_run == True:
+                temperature_sensor_2_long_term_average = float(field_file[1]) * 1024
+            else:
+                temperature_sensor_2_long_term_average = temperature_sensor_2_long_term_average - (temperature_sensor_2_long_term_average / 1024)
+                temperature_sensor_2_long_term_average = temperature_sensor_2_long_term_average + float(field_file[1])
+            # Calculate short term moving average.
+            # Initialize short term average if this is the initial pass.
+            if temperature_sensor_2_first_run == True:
+                temperature_sensor_2_short_term_average = float(field_file[1]) * 32
+            else:
+                temperature_sensor_2_short_term_average = temperature_sensor_2_short_term_average - (temperature_sensor_2_short_term_average / 32)
+                temperature_sensor_2_short_term_average = temperature_sensor_2_short_term_average + float(field_file[1])
+            temperature_sensor_2_first_run = False
+        line = file.readline()
+    file.close()
+    print("length of temperature history: ", len(history_temperature))
+
+
+    print("flag 1:", temperature_sensor_1_first_run, "max 1:",temperature_sensor_1_max_all_time,"min 1:",temperature_sensor_1_min_all_time,"long:", temperature_sensor_1_long_term_average,"short:",temperature_sensor_1_short_term_average)
+    print("flag 2:", temperature_sensor_2_first_run, "max 2:",temperature_sensor_2_max_all_time,"min 2:",temperature_sensor_2_min_all_time,"long:", temperature_sensor_2_long_term_average,"short:",temperature_sensor_2_short_term_average) 
+
                         
     # Initialize LCD.
     lcd_1 = lcd.CharLCD(40, 4, drv, 0, 0)
@@ -319,14 +400,14 @@ def parent():
     temper_probe_2_switch_average = 0
     temper_probe_1_switch_events = 0
     temper_probe_2_switch_events = 0
-    temperature_sensor_1_long_term_average = 0
-    temperature_sensor_2_long_term_average = 0
-    temperature_sensor_1_short_term_average = 0
-    temperature_sensor_2_short_term_average = 0
-    temperature_sensor_1_max_all_time= 0
-    temperature_sensor_2_max_all_time= 0
-    temperature_sensor_1_min_all_time= 0
-    temperature_sensor_2_min_all_time= 0
+#    temperature_sensor_1_long_term_average = 0
+#    temperature_sensor_2_long_term_average = 0
+#    temperature_sensor_1_short_term_average = 0
+#    temperature_sensor_2_short_term_average = 0
+#    temperature_sensor_1_max_all_time= 0
+#    temperature_sensor_2_max_all_time= 0
+#    temperature_sensor_1_min_all_time= 0
+#    temperature_sensor_2_min_all_time= 0
 
     try:
         while True:
@@ -364,7 +445,7 @@ def parent():
                     # Add this interval to total and history.
                     datetime_elasped_time = datetime_last_end - datetime_last_start
                     datetime_elasped_total = datetime_elasped_total + datetime_elasped_time
-                    history.insert(0, datetime_elasped_time)
+                    history_time.insert(0, datetime_elasped_time)
                     print("LaserCutter is Off.")
 
             #
@@ -571,9 +652,9 @@ def parent():
                     lcd_1.stream(str_interval_time)
                 lcd_1.set_xy(20, 2)
                 if lasercutter_state == True:
-                    lcd_1.stream(str(history[next_time_report_index]))
+                    lcd_1.stream(str(history_time[next_time_report_index]))
                 else:
-                    lcd_1.stream(str(history[next_time_report_index]))
+                    lcd_1.stream(str(history_time[next_time_report_index]))
                 lcd_update = True
             # 
             # Status Temperature Page.
@@ -648,7 +729,6 @@ def parent():
                 temperature_sensor_2_first_run = False
             temperature_sensor_1_change = False
             temperature_sensor_2_change = False
-            temperature_sensor_first_run = False
 
     # Catch a keyboard ctrl-c and exit cleanly by giving up the GPIO pins.
     except KeyboardInterrupt:
@@ -695,11 +775,11 @@ def time_on_report_function():
 
 def last_time_report_function():
     global next_time_report_index
-    global history
-    if next_time_report_index < (len(history) - 1):
+    global history_time
+    if next_time_report_index < (len(history_time) - 1):
         next_time_report_index = next_time_report_index + 1
     else:
-        next_time_report_index = (len(history) - 1)
+        next_time_report_index = (len(history_time) - 1)
 
 def next_time_report_function():
     global next_time_report_index
