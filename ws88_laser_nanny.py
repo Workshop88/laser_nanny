@@ -376,6 +376,8 @@ def parent():
     read_list = [server_socket]
     lcd_update = False
     web_update = False
+    temp_log_update_1 = False
+    temp_log_update_2 = False
     lasercutter_state = False
     blast_gate_state_open = False
 
@@ -386,10 +388,11 @@ def parent():
     next_time_report_index = 0
 
     seconds = dt.now()
-    seconds_interval = seconds + datetime.timedelta(seconds = 10)
+    seconds_interval_web = seconds + datetime.timedelta(seconds = 10)
+    seconds_interval_log = seconds + datetime.timedelta(seconds = 10)
 
     print seconds
-    print seconds_interval
+    print seconds_interval_web
 
     screen_lcd_current = screen_lcd.info
 
@@ -415,10 +418,14 @@ def parent():
             date_string = dt.now().date().strftime('%Y-%m-%d')
             seconds = dt.now()
             timestamp = int(time.mktime(dt.now().timetuple()))
-            now = dt.fromtimestamp(timestamp)
-            if seconds > seconds_interval:
-                seconds_interval = seconds + datetime.timedelta(seconds = 10)
+#            now = dt.fromtimestamp(timestamp)
+            if seconds > seconds_interval_web:
+                seconds_interval_web = seconds + datetime.timedelta(seconds = 60)
                 web_update = True
+            if seconds > seconds_interval_log:
+                seconds_interval_log = seconds + datetime.timedelta(seconds = 10)
+                temp_log_update_1 = True
+                temp_log_update_2 = True
 
             #
             # Process LaserCutter power On/Off here.
@@ -573,6 +580,38 @@ def parent():
                     if temperature_sensor_2_min_all_time > float(temperature_sensor_2):
                         temperature_sensor_2_min_all_time = float(temperature_sensor_2)
 
+            #
+            # Manage writing temperature data to log file.
+            #
+            if (temperature_sensor_1_change == True) or (temperature_sensor_2_change == True):
+                # Open file if either temperature sensor has changed.
+                file = open('/home/pi/git/laser_nanny/laser_nanny_temperature.log','a')
+                if temperature_sensor_1_change == True:
+                    # Has it been long enough since the last time we wrote data to the log file.
+                    if temp_log_update_1 == True:
+                        temp_log_update_1 = False
+                        # Write temperature from probe 1.
+                        file.write('1, '+temperature_sensor_1+'\n')
+                if temperature_sensor_2_change == True:
+                    # Has it been long enough since the last time we wrote data to the log file.
+                    if temp_log_update_2 == True:
+                        temp_log_update_2 = False
+                        # Write temperature from probe 2.
+                        file.write('2, '+temperature_sensor_2+'\n')
+                file.close()
+
+            #
+            #  Manage reporting temperature on web page.
+            #
+            if web_update:
+                web_update = False
+#                data_string = temperature_sensor_1+','+temperature_sensor_2+','+time_string
+                data_string = temperature_sensor_1+','+temperature_sensor_2+','+time_string+','+str(temperature_sensor_1_max_all_time)+','+str(temperature_sensor_1_min_all_time)+','+str(temperature_sensor_2_max_all_time)+','+str(temperature_sensor_2_min_all_time)
+                data = urllib.urlencode({'feed_name':data_string})
+                full_url = url + '?' + data
+                print("url:", full_url)
+                response = urllib2.urlopen(full_url)
+                print full_url
 
             #
             # Manage dynamic LCD information.
@@ -708,18 +747,6 @@ def parent():
             if lcd_update:
                 lcd_update = False
                 lcd_1.flush()
-
-            #
-            #  Manage reporting temperature on web page.
-            #
-            if web_update:
-                web_update = False
-                data_string = temperature_sensor_1+','+temperature_sensor_2+','+time_string
-                data = urllib.urlencode({'feed_name':data_string})
-                full_url = url + '?' + data
-                print("url:", full_url)
-                response = urllib2.urlopen(full_url)
-                print full_url
 
             # End of executive loop.
             # Clear out any flags that only need to be set once per loop.
