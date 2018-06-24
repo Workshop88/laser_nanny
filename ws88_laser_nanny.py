@@ -264,10 +264,12 @@ def parent():
             print("datetime_elasped_time:", datetime_elasped_time)
             datetime_elasped_total = datetime_elasped_total + datetime_elasped_time
             # Grab the last 10 elasped times.
-            history.append(datetime_elasped_time)
+            history.insert(0, datetime_elasped_time)
             # rbf Limit size of history to 10 here.
         line = file.readline()
     file.close()
+    # Ignore any on event with missing off events by setting off event to on event datetime.
+    datetime_last_end = datetime_last_start
     # Arrange history sequence.
     print("length of history: ", len(history))
                         
@@ -359,6 +361,10 @@ def parent():
                     file = open('/home/pi/git/laser_nanny/laser_nanny.log','a')
                     file.write('off, '+str(datetime_last_end.strftime('%Y-%m-%d %H:%M:%S'))+'\n')
                     file.close()
+                    # Add this interval to total and history.
+                    datetime_elasped_time = datetime_last_end - datetime_last_start
+                    datetime_elasped_total = datetime_elasped_total + datetime_elasped_time
+                    history.insert(0, datetime_elasped_time)
                     print("LaserCutter is Off.")
 
             #
@@ -552,22 +558,23 @@ def parent():
                          # Laser cutter is off so report off_time - start_time.
                          datetime_elasped_time = datetime_last_end - datetime_last_start
                          str_elasped_time = "(Last Time) "+str(datetime_elasped_time)
+                    lcd_1.stream(str_elasped_time)
                 else:
                     # Report total time.
                     str_elasped_time = "(Total) "+str(datetime_elasped_total.strftime('%H:%M:%S'))
                     lcd_1.stream(str_elasped_time)
-                    lcd_1.set_xy(20, 1)
-                    if next_time_report_index == 0:
-                        lcd_1.stream("Current Interval")
-                    else:
-                        str_interval_time = "Back " + str(next_time_report_index) + " Intervals"
-                        lcd_1.stream(str_interval_time)
-                    lcd_1.set_xy(20, 2)
-                    if lasercutter_state == True:
-                        lcd_1.stream(datetime_last_end.strftime('%H:%M:%S'))
-                    else:
-                        lcd_1.stream(str(history[next_time_report_index]))
-                    lcd_update = True
+                lcd_1.set_xy(20, 1)
+                if next_time_report_index == 0:
+                    lcd_1.stream("Last Interval")
+                else:
+                    str_interval_time = "Back " + str(next_time_report_index) + " Intervals"
+                    lcd_1.stream(str_interval_time)
+                lcd_1.set_xy(20, 2)
+                if lasercutter_state == True:
+                    lcd_1.stream(str(history[next_time_report_index]))
+                else:
+                    lcd_1.stream(str(history[next_time_report_index]))
+                lcd_update = True
             # 
             # Status Temperature Page.
             # 
