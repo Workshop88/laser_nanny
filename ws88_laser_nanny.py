@@ -220,9 +220,9 @@ def parent():
 
         # Settings.
         'Menu007Type':'Menu',
-        'Menu007Item001':("Publish on temp change.", 7, null_function),
-        'Menu007Item002':("Publish on time change.", 7, null_function),
-        'Menu007Item003':("Publish on temp or time change.", 7, null_function),
+        'Menu007Item001':("Publish on temp change. n/a", 7, null_function),
+        'Menu007Item002':("Publish on time change. n/a", 7, null_function),
+        'Menu007Item003':("Publish on temp or time change. n/a", 7, null_function),
         'Menu007Item004':("Back", 2, null_function),
 
         # About.
@@ -254,7 +254,7 @@ def parent():
     file.seek(0)
     line = file.readline()
     print("line:", line)
-    while (line <> line_last):
+    while (line != line_last):
         print("line:", line)
         # Sort on and off events and accumulate total on time.
         field_file = line.strip().split(",")
@@ -288,7 +288,7 @@ def parent():
     file.seek(0)
     line = file.readline()
     print("line:", line)
-    while (line <> line_last):
+    while (line != line_last):
         print("line:", line)
         # Sort probe 1 and 2 readings and find max & min and calcualte averages
         field_file = line.strip().split(",")
@@ -371,7 +371,7 @@ def parent():
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind(('', 6000))
     server_socket.listen(5)
-    print "Listening on port 6000"
+    print ("Listening on port 6000")
 
     read_list = [server_socket]
     lcd_update = False
@@ -391,8 +391,8 @@ def parent():
     seconds_interval_web = seconds + datetime.timedelta(seconds = 10)
     seconds_interval_log = seconds + datetime.timedelta(seconds = 10)
 
-    print seconds
-    print seconds_interval_web
+    print (seconds)
+    print (seconds_interval_web)
 
     screen_lcd_current = screen_lcd.info
 
@@ -503,7 +503,7 @@ def parent():
                 if s is server_socket:
                     client_socket, address = server_socket.accept()
                     read_list.append(client_socket)
-                    print "Connection from", address
+                    print ("Connection from", address)
                 else:
                     data = s.recv(1024)
                     if data:
@@ -611,7 +611,7 @@ def parent():
                 full_url = url + '?' + data
                 print("url:", full_url)
                 response = urllib2.urlopen(full_url)
-                print full_url
+                print (full_url)
 
             #
             # Manage dynamic LCD information.
