@@ -8,6 +8,10 @@
 
 <h2>
 <div id="timestamp_div"></div>
+<div id="duct_max_div"></div>
+<div id="duct_min_div"></div>
+<div id="cabinent_max_div"></div>
+<div id="cabinent_min_div"></div>
 </h2>
 
 <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
@@ -92,8 +96,16 @@ function drawChart() {
   var temperature_read_duct = parseFloat(fields[0]);
   var temperature_read_laser = parseFloat(fields[1]);
   var time_stamp_from_laser = (fields[2]);
+  var temperature_read_duct_max = (fields[3]);
+  var temperature_read_duct_min = (fields[4]);
+  var temperature_read_laser_max = (fields[5]);
+  var temperature_read_laser_min = (fields[6]);
 
   document.getElementById("timestamp_div").innerText = "Time stamp: "+time_stamp_from_laser;
+  document.getElementById("duct_max_div").innerText = "Duct max Temperature: "+temperature_read_duct_max
+  document.getElementById("duct_min_div").innerText = "Duct min Temperature: "+temperature_read_duct_min
+  document.getElementById("cabinent_max_div").innerText = "Cabinent max Temperature: "+temperature_read_laser_max
+  document.getElementById("cabinent_min_div").innerText = "Cabinent min Temperature: "+temperature_read_laser_min
 
   txtFileSync=null;
   allText = null;
