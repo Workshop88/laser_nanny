@@ -201,7 +201,7 @@ def parent():
         # Status menu.
         'Menu004Type':'Menu',
         'Menu004Item001':("Time Status", 5, null_function),
-        'Menu004Item002':("Temperature Status:", 6, null_function),
+        'Menu004Item002':("Temperature Status", 6, null_function),
         'Menu004Item003':("Back", 2, null_function),
 
         # Status time.
@@ -411,6 +411,8 @@ def parent():
 #    temperature_sensor_2_max_all_time= 0
 #    temperature_sensor_1_min_all_time= 0
 #    temperature_sensor_2_min_all_time= 0
+    temperature_sensor_1_old = 0
+    temperature_sensor_2_old = 0
 
     try:
         while True:
@@ -512,11 +514,19 @@ def parent():
                         if data_list[0] == "1":
                             # This is temperature sensor 1.
                             temperature_sensor_1 = data_list[1]
-                            temperature_sensor_1_change = True
+#                            if (temperature_sensor_1_old > (float(temperature_sensor_1) + 0.5)) or (temperature_sensor_1_old < (float(temperature_sensor_1) - 0.5)):
+                            if (1):
+                                # Update old temperature
+                                temperature_sensor_1_old = float(temperature_sensor_1)
+                                temperature_sensor_1_change = True
                         else:
                             # This is temperature sensor 2.
                             temperature_sensor_2 = data_list[1]
-                            temperature_sensor_2_change = True
+#                            if (temperature_sensor_2_old > (float(temperature_sensor_2) + 0.5)) or (temperature_sensor_2_old < (float(temperature_sensor_2) - 0.5)):
+                            if (1):
+                                # Update old temperature
+                                temperature_sensor_2_old = float(temperature_sensor_2)
+                                temperature_sensor_2_change = True
                     else:
                         s.close()
                         read_list.remove(s)
@@ -591,13 +601,13 @@ def parent():
                     if temp_log_update_1 == True:
                         temp_log_update_1 = False
                         # Write temperature from probe 1.
-                        file.write('1, '+temperature_sensor_1+'\n')
+                        file.write('1, '+temperature_sensor_1+','+str(dt.now().strftime('%Y-%m-%d %H:%M:%S'))+'\n')
                 if temperature_sensor_2_change == True:
                     # Has it been long enough since the last time we wrote data to the log file.
                     if temp_log_update_2 == True:
                         temp_log_update_2 = False
                         # Write temperature from probe 2.
-                        file.write('2, '+temperature_sensor_2+'\n')
+                        file.write('2, '+temperature_sensor_2+','+str(dt.now().strftime('%Y-%m-%d %H:%M:%S'))+'\n') ### rjs
                 file.close()
 
             #
