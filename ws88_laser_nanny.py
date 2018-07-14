@@ -398,6 +398,8 @@ def parent():
 
     temperature_sensor_1_change = False
     temperature_sensor_2_change = False
+    temperature_sensor_1_new = False
+    temperature_sensor_2_new = False
     temper_probe_1_active = True
     temper_probe_1_switch_average = 0
     temper_probe_2_switch_average = 0
@@ -514,16 +516,18 @@ def parent():
                         if data_list[0] == "1":
                             # This is temperature sensor 1.
                             temperature_sensor_1 = data_list[1]
-#                            if (temperature_sensor_1_old > (float(temperature_sensor_1) + 0.5)) or (temperature_sensor_1_old < (float(temperature_sensor_1) - 0.5)):
-                            if (1):
+                            temp_temperature_sensor = float(temperature_sensor_1)
+                            temperature_sensor_1_new = True
+                            if (temperature_sensor_1_old > (temp_temperature_sensor + 0.5)) or (temperature_sensor_1_old < (temp_temperature_sensor - 0.5)):
                                 # Update old temperature
                                 temperature_sensor_1_old = float(temperature_sensor_1)
                                 temperature_sensor_1_change = True
                         else:
                             # This is temperature sensor 2.
                             temperature_sensor_2 = data_list[1]
-#                            if (temperature_sensor_2_old > (float(temperature_sensor_2) + 0.5)) or (temperature_sensor_2_old < (float(temperature_sensor_2) - 0.5)):
-                            if (1):
+                            temp_temperature_sensor = float(temperature_sensor_2)
+                            temperature_sensor_2_new = True
+                            if (temperature_sensor_2_old > (temp_temperature_sensor + 0.5)) or (temperature_sensor_2_old < (temp_temperature_sensor - 0.5)):
                                 # Update old temperature
                                 temperature_sensor_2_old = float(temperature_sensor_2)
                                 temperature_sensor_2_change = True
@@ -535,7 +539,7 @@ def parent():
             # Analyz temperature date.
             # 
             # Calculate long term moving average.
-            if temperature_sensor_1_change == True:
+            if temperature_sensor_1_new == True:
                 # Initialize long term average if this is the initial pass.
                 if temperature_sensor_1_first_run == True:
                     temperature_sensor_1_long_term_average = float(temperature_sensor_1) * 1024
@@ -544,7 +548,7 @@ def parent():
                 else:
                     temperature_sensor_1_long_term_average = temperature_sensor_1_long_term_average - (temperature_sensor_1_long_term_average / 1024)
                     temperature_sensor_1_long_term_average = temperature_sensor_1_long_term_average + float(temperature_sensor_1)
-            if temperature_sensor_2_change == True:
+            if temperature_sensor_2_new == True:
                 # Initialize long term average if this is the initial pass.
                 if temperature_sensor_2_first_run == True:
                     temperature_sensor_2_long_term_average = float(temperature_sensor_2) * 1024
@@ -554,14 +558,14 @@ def parent():
                     temperature_sensor_2_long_term_average = temperature_sensor_2_long_term_average - (temperature_sensor_2_long_term_average / 1024)
                     temperature_sensor_2_long_term_average = temperature_sensor_2_long_term_average + float(temperature_sensor_2)
             # Calculate short term moving average.
-            if temperature_sensor_1_change == True:
+            if temperature_sensor_1_new == True:
                 # Initialize short term average if this is the initial pass.
                 if temperature_sensor_1_first_run == True:
                     temperature_sensor_1_short_term_average = float(temperature_sensor_1) * 32
                 else:
                     temperature_sensor_1_short_term_average = temperature_sensor_1_short_term_average - (temperature_sensor_1_short_term_average / 32)
                     temperature_sensor_1_short_term_average = temperature_sensor_1_short_term_average + float(temperature_sensor_1)
-            if temperature_sensor_2_change == True:
+            if temperature_sensor_2_new == True:
                 # Initialize short term average if this is the initial pass.
                 if temperature_sensor_2_first_run == True:
                     temperature_sensor_2_short_term_average = float(temperature_sensor_2) * 32
@@ -569,7 +573,7 @@ def parent():
                     temperature_sensor_2_short_term_average = temperature_sensor_2_short_term_average - (temperature_sensor_2_short_term_average / 32)
                     temperature_sensor_2_short_term_average = temperature_sensor_2_short_term_average + float(temperature_sensor_2)
             # Calculate min and max temperatures.
-            if temperature_sensor_1_change == True:
+            if temperature_sensor_1_new == True:
                 # Initialize max and min if this is the initial pass.
                 if temperature_sensor_1_first_run == True:
                     temperature_sensor_1_max_all_time = float(temperature_sensor_1)
@@ -579,7 +583,7 @@ def parent():
                         temperature_sensor_1_max_all_time = float(temperature_sensor_1)
                     if temperature_sensor_1_min_all_time > float(temperature_sensor_1):
                         temperature_sensor_1_min_all_time = float(temperature_sensor_1)
-            if temperature_sensor_2_change == True:
+            if temperature_sensor_2_new == True:
                 # Initialize max and min if this is the initial pass.
                 if temperature_sensor_2_first_run == True:
                     temperature_sensor_2_max_all_time = float(temperature_sensor_2)
@@ -607,7 +611,7 @@ def parent():
                     if temp_log_update_2 == True:
                         temp_log_update_2 = False
                         # Write temperature from probe 2.
-                        file.write('2, '+temperature_sensor_2+','+str(dt.now().strftime('%Y-%m-%d %H:%M:%S'))+'\n') ### rjs
+                        file.write('2, '+temperature_sensor_2+','+str(dt.now().strftime('%Y-%m-%d %H:%M:%S'))+'\n')
                 file.close()
 
             #
@@ -630,14 +634,14 @@ def parent():
             # 
             if menu_current == 1:
                 # Manage reporting temperature on LCD.
-                if temperature_sensor_1_change == True:
-#                     temperature_sensor_1_change = False
+                if temperature_sensor_1_new == True:
+#                     temperature_sensor_1_new = False
                     print("Sensor 1: " + data_list[1])
                     lcd_1.set_xy(20, 1)
                     lcd_1.stream(data_list[1])
                     lcd_update = True
-                if temperature_sensor_2_change == True:
-#                     temperature_sensor_2_change = False
+                if temperature_sensor_2_new == True:
+#                     temperature_sensor_2_new = False
                     print("Sensor 2: " + data_list[1])
                     lcd_1.set_xy(20, 2)
                     lcd_1.stream(data_list[1])
@@ -709,9 +713,9 @@ def parent():
             # Status Temperature Page.
             # 
             elif menu_current == 6:
-                if temperature_sensor_1_change == True:
+                if temperature_sensor_1_new == True:
                     lcd_update = True
-                if temperature_sensor_2_change == True:
+                if temperature_sensor_2_new == True:
                     lcd_update = True
                 lcd_1.set_xy(20, 0)
                 if temper_probe_1_active == True:
@@ -760,10 +764,12 @@ def parent():
 
             # End of executive loop.
             # Clear out any flags that only need to be set once per loop.
-            if temperature_sensor_1_change == True:
+            if temperature_sensor_1_new == True:
                 temperature_sensor_1_first_run = False
-            if temperature_sensor_2_change == True:
+            if temperature_sensor_2_new == True:
                 temperature_sensor_2_first_run = False
+            temperature_sensor_1_new = False
+            temperature_sensor_2_new = False
             temperature_sensor_1_change = False
             temperature_sensor_2_change = False
 
