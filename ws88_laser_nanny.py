@@ -374,10 +374,12 @@ def parent():
     print ("Listening on port 6000")
 
     read_list = [server_socket]
+    log_update_1 = False
+    log_update_2 = False
     lcd_update = False
     web_update = False
-    temp_log_update_1 = False
-    temp_log_update_2 = False
+    log_update_1 = False
+    log_update_2 = False
     lasercutter_state = False
     blast_gate_state_open = False
 
@@ -405,31 +407,31 @@ def parent():
     temper_probe_2_switch_average = 0
     temper_probe_1_switch_events = 0
     temper_probe_2_switch_events = 0
-#    temperature_sensor_1_long_term_average = 0
-#    temperature_sensor_2_long_term_average = 0
-#    temperature_sensor_1_short_term_average = 0
-#    temperature_sensor_2_short_term_average = 0
-#    temperature_sensor_1_max_all_time= 0
-#    temperature_sensor_2_max_all_time= 0
-#    temperature_sensor_1_min_all_time= 0
-#    temperature_sensor_2_min_all_time= 0
     temperature_sensor_1_old = 0
     temperature_sensor_2_old = 0
 
+    temperature_sensor_1 = ""
+    temperature_sensor_2 = ""
+
     try:
         while True:
+            #
+            # Manage time related events.
+            #
+            # Grab the current time and date in string form.
             time_string = dt.now().time().strftime('%H:%M:%S')
             date_string = dt.now().date().strftime('%Y-%m-%d')
+            # Grab the current date/time.
             seconds = dt.now()
-            timestamp = int(time.mktime(dt.now().timetuple()))
-#            now = dt.fromtimestamp(timestamp)
+            # Manage the time interval between web updates.
             if seconds > seconds_interval_web:
                 seconds_interval_web = seconds + datetime.timedelta(seconds = 60)
                 web_update = True
+            # Manage the time interval between log updates.
             if seconds > seconds_interval_log:
-                seconds_interval_log = seconds + datetime.timedelta(seconds = 10)
-                temp_log_update_1 = True
-                temp_log_update_2 = True
+                seconds_interval_log = seconds + datetime.timedelta(seconds = 60)
+                log_update_1 = True
+                log_update_2 = True
 
             #
             # Process LaserCutter power On/Off here.
@@ -597,29 +599,25 @@ def parent():
             #
             # Manage writing temperature data to log file.
             #
-            if (temperature_sensor_1_change == True) or (temperature_sensor_2_change == True):
+            if (log_update_1) or (log_update_2) or (temperature_sensor_1_change == True) or (temperature_sensor_2_change == True):
+                # We are updating the log information so reset the back off timer.
+                seconds_interval_log = seconds + datetime.timedelta(seconds = 60)
                 # Open file if either temperature sensor has changed.
                 file = open('/home/pi/git/laser_nanny/laser_nanny_temperature.log','a')
-                if temperature_sensor_1_change == True:
-                    # Has it been long enough since the last time we wrote data to the log file.
-                    if temp_log_update_1 == True:
-                        temp_log_update_1 = False
-                        # Write temperature from probe 1.
-                        file.write('1, '+temperature_sensor_1+','+str(dt.now().strftime('%Y-%m-%d %H:%M:%S'))+'\n')
-                if temperature_sensor_2_change == True:
-                    # Has it been long enough since the last time we wrote data to the log file.
-                    if temp_log_update_2 == True:
-                        temp_log_update_2 = False
-                        # Write temperature from probe 2.
-                        file.write('2, '+temperature_sensor_2+','+str(dt.now().strftime('%Y-%m-%d %H:%M:%S'))+'\n')
+                if (log_update_1) or (temperature_sensor_1_change == True):
+                    # Write temperature from probe 1.
+                    file.write('1, '+temperature_sensor_1+','+str(dt.now().strftime('%Y-%m-%d %H:%M:%S'))+'\n')
+                if (log_update_2) or (temperature_sensor_2_change == True):
+                    # Write temperature from probe 2.
+                    file.write('2, '+temperature_sensor_2+','+str(dt.now().strftime('%Y-%m-%d %H:%M:%S'))+'\n')
                 file.close()
 
             #
             #  Manage reporting temperature on web page.
             #
-            if web_update:
-                web_update = False
-#                data_string = temperature_sensor_1+','+temperature_sensor_2+','+time_string
+            if (web_update) or (temperature_sensor_1_change) or (temperature_sensor_2_change):
+                # We are updating the web information so reset the back off timer.
+                seconds_interval_web = seconds + datetime.timedelta(seconds = 60)
                 data_string = temperature_sensor_1+','+temperature_sensor_2+','+time_string+','+str(temperature_sensor_1_max_all_time)+','+str(temperature_sensor_1_min_all_time)+','+str(temperature_sensor_2_max_all_time)+','+str(temperature_sensor_2_min_all_time)
                 data = urllib.urlencode({'feed_name':data_string})
                 full_url = url + '?' + data
@@ -772,6 +770,9 @@ def parent():
             temperature_sensor_2_new = False
             temperature_sensor_1_change = False
             temperature_sensor_2_change = False
+            web_update = False
+            log_update_1 = False
+            log_update_2 = False
 
     # Catch a keyboard ctrl-c and exit cleanly by giving up the GPIO pins.
     except KeyboardInterrupt:
