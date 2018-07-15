@@ -393,6 +393,8 @@ def parent():
     seconds_interval_web = seconds + datetime.timedelta(seconds = 10)
     seconds_interval_log = seconds + datetime.timedelta(seconds = 10)
 
+    seconds_interval_lcd_menu_timeout = seconds + datetime.timedelta(seconds = 60)
+
     print (seconds)
     print (seconds_interval_web)
 
@@ -462,11 +464,27 @@ def parent():
                     print("LaserCutter is Off.")
 
             #
+            # Process key time out return to top menu here.
+            #
+            if(seconds_interval_lcd_menu_timeout < seconds):
+                # Reset the lcd menu timeout back off timer.
+                seconds_interval_lcd_menu_timeout = seconds + datetime.timedelta(seconds = 60)
+                # Set up to fake button press and switch / display top menu.
+                key_press = True
+                # Note, the following depends on menu 2 option 4 always going back to 
+                # the top menu w/o calling any routines (i.e. the "back" button).  If
+                # this changes then we need to change the following 2 lines.
+                menu_current = 2
+                key_value = 4
+
+            #
             # Process key presses & menu changes here.
             #
             if key_press == True:
                 # Clear out the keypress flag.
                 key_press = False
+                # Reset the lcd menu timeout back off timer.
+                seconds_interval_lcd_menu_timeout = seconds + datetime.timedelta(seconds = 60)
                 # Find the menu we will display next.
                 print("Before:",menu_current)
                 item =  "Menu"+"{:03n}".format(menu_current)+"Item"+"{:03n}".format(key_value)
