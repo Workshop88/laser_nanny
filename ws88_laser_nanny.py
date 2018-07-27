@@ -491,7 +491,7 @@ def parent():
                 item_save_for_later = item
                 if item in menus:
                     menu_current = menus.get(item)[1]
-                else:
+##                else:
 ##                    print("key not found in dictionary")
 ##                print("After:",menu_current)
                 # Render menu.
@@ -885,7 +885,7 @@ def temper_probe_switch_events():
 
 # This function should never be called.
 def null_function():
-##    print("Something called the NULL Function: This function should never be called.")
+    print("Something called the NULL Function: This function should never be called.")
 
 # Decide if we are the child or the parent.
 def main():
