@@ -619,7 +619,7 @@ def parent():
             #
             if (log_update_1) or (log_update_2) or (temperature_sensor_1_change == True) or (temperature_sensor_2_change == True):
                 # We are updating the log information so reset the back off timer.
-                seconds_interval_log = seconds + datetime.timedelta(seconds = 60)
+                seconds_interval_log = seconds + datetime.timedelta(seconds = 300)
                 # Open file if either temperature sensor has changed.
                 file = open('/home/pi/git/laser_nanny/laser_nanny_temperature.log','a')
                 if (log_update_1) or (temperature_sensor_1_change == True):
@@ -635,7 +635,7 @@ def parent():
             #
             if (web_update) or (temperature_sensor_1_change) or (temperature_sensor_2_change):
                 # We are updating the web information so reset the back off timer.
-                seconds_interval_web = seconds + datetime.timedelta(seconds = 60)
+                seconds_interval_web = seconds + datetime.timedelta(seconds = 300)
                 data_string = temperature_sensor_1+','+temperature_sensor_2+','+time_string+','+str(temperature_sensor_1_max_all_time)+','+str(temperature_sensor_1_min_all_time)+','+str(temperature_sensor_2_max_all_time)+','+str(temperature_sensor_2_min_all_time)
                 data = urllib.urlencode({'feed_name':data_string})
                 full_url = url + '?' + data
