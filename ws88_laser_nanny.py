@@ -89,7 +89,7 @@ keypad.registerKeyPressHandler(printKey)
 # Child program routine.
 #
 def child():
-    print("Starting child: ", os.getpid())
+##    print("Starting child: ", os.getpid())
 
     from w1thermsensor import W1ThermSensor
     sensor = W1ThermSensor()
@@ -249,22 +249,22 @@ def parent():
     # Go to end of file.
     file.seek(0,2)
     line_last = file.readline()
-    print("line_last:",line_last)
+##    print("line_last:",line_last)
     # Go to beginning of file.
     file.seek(0)
     line = file.readline()
-    print("line:", line)
+##    print("line:", line)
     while (line != line_last):
-        print("line:", line)
+##        print("line:", line)
         # Sort on and off events and accumulate total on time.
         field_file = line.strip().split(",")
-        print("field_file:", field_file[0], field_file[1])
+##        print("field_file:", field_file[0], field_file[1])
         if field_file[0] == "on":
             datetime_last_start = dt.strptime(field_file[1].strip(), '%Y-%m-%d %H:%M:%S')
         elif field_file[0] == "off":
             datetime_last_end = dt.strptime(field_file[1].strip(),'%Y-%m-%d %H:%M:%S')
             datetime_elasped_time = datetime_last_end - datetime_last_start
-            print("datetime_elasped_time:", datetime_elasped_time)
+##            print("datetime_elasped_time:", datetime_elasped_time)
             datetime_elasped_total = datetime_elasped_total + datetime_elasped_time
             # Grab the last 10 elasped times.
             history_time.insert(0, datetime_elasped_time)
@@ -274,7 +274,7 @@ def parent():
     # Ignore any on event with missing off events by setting off event to on event datetime.
     datetime_last_end = datetime_last_start
     # Arrange history sequence.
-    print("length of time history: ", len(history_time))
+##    print("length of time history: ", len(history_time))
                         
     #
     # Open temperature stamp file and read any history.
@@ -283,16 +283,16 @@ def parent():
     # Go to end of file.
     file.seek(0,2)
     line_last = file.readline()
-    print("line_last:",line_last)
+##    print("line_last:",line_last)
     # Go to beginning of file.
     file.seek(0)
     line = file.readline()
-    print("line:", line)
+##    print("line:", line)
     while (line != line_last):
-        print("line:", line)
+##        print("line:", line)
         # Sort probe 1 and 2 readings and find max & min and calcualte averages
         field_file = line.strip().split(",")
-        print("field_file:", field_file[0], field_file[1])
+##        print("field_file:", field_file[0], field_file[1])
         if field_file[0] == "1":
             # Looking for max & min.
             # Initialize max and min if this is the initial pass.
@@ -347,11 +347,11 @@ def parent():
             temperature_sensor_2_first_run = False
         line = file.readline()
     file.close()
-    print("length of temperature history: ", len(history_temperature))
+##    print("length of temperature history: ", len(history_temperature))
 
 
-    print("flag 1:", temperature_sensor_1_first_run, "max 1:",temperature_sensor_1_max_all_time,"min 1:",temperature_sensor_1_min_all_time,"long:", temperature_sensor_1_long_term_average,"short:",temperature_sensor_1_short_term_average)
-    print("flag 2:", temperature_sensor_2_first_run, "max 2:",temperature_sensor_2_max_all_time,"min 2:",temperature_sensor_2_min_all_time,"long:", temperature_sensor_2_long_term_average,"short:",temperature_sensor_2_short_term_average) 
+##    print("flag 1:", temperature_sensor_1_first_run, "max 1:",temperature_sensor_1_max_all_time,"min 1:",temperature_sensor_1_min_all_time,"long:", temperature_sensor_1_long_term_average,"short:",temperature_sensor_1_short_term_average)
+##    print("flag 2:", temperature_sensor_2_first_run, "max 2:",temperature_sensor_2_max_all_time,"min 2:",temperature_sensor_2_min_all_time,"long:", temperature_sensor_2_long_term_average,"short:",temperature_sensor_2_short_term_average) 
 
                         
     # Initialize LCD.
@@ -361,7 +361,7 @@ def parent():
     # Render menus.
     for item in menus:
         if item.startswith("Menu"+"{:03n}".format(menu_current)+"Item"):
-            print(menus.get(item)[0])
+##            print(menus.get(item)[0])
             lcd_1.set_xy(0,((int(item[11:14])) - 1))
             lcd_1.stream(menus.get(item)[0])
     lcd_1.flush()
@@ -371,7 +371,7 @@ def parent():
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind(('', 6000))
     server_socket.listen(5)
-    print ("Listening on port 6000")
+##    print ("Listening on port 6000")
 
     read_list = [server_socket]
     log_update_1 = False
@@ -395,8 +395,8 @@ def parent():
 
     seconds_interval_lcd_menu_timeout = seconds + datetime.timedelta(seconds = 60)
 
-    print (seconds)
-    print (seconds_interval_web)
+##    print (seconds)
+##    print (seconds_interval_web)
 
     screen_lcd_current = screen_lcd.info
 
@@ -427,11 +427,11 @@ def parent():
             seconds = dt.now()
             # Manage the time interval between web updates.
             if seconds > seconds_interval_web:
-                seconds_interval_web = seconds + datetime.timedelta(seconds = 60)
+                seconds_interval_web = seconds + datetime.timedelta(seconds = 300)
                 web_update = True
             # Manage the time interval between log updates.
             if seconds > seconds_interval_log:
-                seconds_interval_log = seconds + datetime.timedelta(seconds = 60)
+                seconds_interval_log = seconds + datetime.timedelta(seconds = 300)
                 log_update_1 = True
                 log_update_2 = True
 
@@ -447,7 +447,7 @@ def parent():
                     file = open('/home/pi/git/laser_nanny/laser_nanny.log','a')
                     file.write('on, '+str(datetime_last_start.strftime('%Y-%m-%d %H:%M:%S'))+'\n')
                     file.close()
-                    print("LaserCutter is On.")
+##                    print("LaserCutter is On.")
             else:
                 if lasercutter_state == True:
                     lasercutter_state = False
@@ -461,7 +461,7 @@ def parent():
                     datetime_elasped_time = datetime_last_end - datetime_last_start
                     datetime_elasped_total = datetime_elasped_total + datetime_elasped_time
                     history_time.insert(0, datetime_elasped_time)
-                    print("LaserCutter is Off.")
+##                    print("LaserCutter is Off.")
 
             #
             # Process key time out return to top menu here.
@@ -486,19 +486,19 @@ def parent():
                 # Reset the lcd menu timeout back off timer.
                 seconds_interval_lcd_menu_timeout = seconds + datetime.timedelta(seconds = 60)
                 # Find the menu we will display next.
-                print("Before:",menu_current)
+##                print("Before:",menu_current)
                 item =  "Menu"+"{:03n}".format(menu_current)+"Item"+"{:03n}".format(key_value)
                 item_save_for_later = item
                 if item in menus:
                     menu_current = menus.get(item)[1]
                 else:
-                    print("key not found in dictionary")
-                print("After:",menu_current)
+##                    print("key not found in dictionary")
+##                print("After:",menu_current)
                 # Render menu.
                 lcd_1.buffer_clear()
                 for item in menus:
                     if item.startswith("Menu"+"{:03n}".format(menu_current)+"Item"):
-                        print(menus.get(item)[0])
+##                        print(menus.get(item)[0])
                         item_number = int(item[11:14])
                         # Set LCD position of item's text.
                         lcd_1.set_xy((20 * int(item_number / 5)),(item_number - 1) % 4)
@@ -511,8 +511,8 @@ def parent():
                 # Call function if there is one.
                 if item_save_for_later in menus:
                     if menus.get(item_save_for_later)[2] != null_function:
-                        print("===>", item_save_for_later)
-                        print("===>", menus.get(item_save_for_later)[2])
+##                        print("===>", item_save_for_later)
+##                        print("===>", menus.get(item_save_for_later)[2])
                         menus.get(item_save_for_later)[2]()
                 
 
@@ -527,7 +527,7 @@ def parent():
                 if s is server_socket:
                     client_socket, address = server_socket.accept()
                     read_list.append(client_socket)
-                    print ("Connection from", address)
+##                    print ("Connection from", address)
                 else:
                     data = s.recv(1024)
                     if data:
@@ -639,9 +639,9 @@ def parent():
                 data_string = temperature_sensor_1+','+temperature_sensor_2+','+time_string+','+str(temperature_sensor_1_max_all_time)+','+str(temperature_sensor_1_min_all_time)+','+str(temperature_sensor_2_max_all_time)+','+str(temperature_sensor_2_min_all_time)
                 data = urllib.urlencode({'feed_name':data_string})
                 full_url = url + '?' + data
-                print("url:", full_url)
+##                print("url:", full_url)
                 response = urllib2.urlopen(full_url)
-                print (full_url)
+##                print (full_url)
 
             #
             # Manage dynamic LCD information.
@@ -652,13 +652,13 @@ def parent():
                 # Manage reporting temperature on LCD.
                 if temperature_sensor_1_new == True:
 #                     temperature_sensor_1_new = False
-                    print("Sensor 1: " + data_list[1])
+##                    print("Sensor 1: " + data_list[1])
                     lcd_1.set_xy(20, 1)
                     lcd_1.stream(data_list[1])
                     lcd_update = True
                 if temperature_sensor_2_new == True:
 #                     temperature_sensor_2_new = False
-                    print("Sensor 2: " + data_list[1])
+##                    print("Sensor 2: " + data_list[1])
                     lcd_1.set_xy(20, 2)
                     lcd_1.stream(data_list[1])
                     lcd_update = True
@@ -794,7 +794,7 @@ def parent():
 
     # Catch a keyboard ctrl-c and exit cleanly by giving up the GPIO pins.
     except KeyboardInterrupt:
-        print("\rCtrl-C detected.  Cleaning up and exiting ws88_laser_nanny.")
+##        print("\rCtrl-C detected.  Cleaning up and exiting ws88_laser_nanny.")
         GPIO.cleanup()
         sys.exit()
 
@@ -885,7 +885,7 @@ def temper_probe_switch_events():
 
 # This function should never be called.
 def null_function():
-    print("Something called the NULL Function: This function should never be called.")
+##    print("Something called the NULL Function: This function should never be called.")
 
 # Decide if we are the child or the parent.
 def main():
@@ -893,7 +893,7 @@ def main():
     if newpid == 0:
         child()
     else:
-        print("Parent: ", os.getpid(), "Child: ", newpid)
+##        print("Parent: ", os.getpid(), "Child: ", newpid)
         parent()
    
 
