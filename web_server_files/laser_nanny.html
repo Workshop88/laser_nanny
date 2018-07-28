@@ -7,6 +7,7 @@
 <div id="chart_div"></div>
 
 <h2>
+<div id="gate_state_div"></div>
 <div id="timestamp_div"></div>
 <div id="duct_max_div"></div>
 <div id="duct_min_div"></div>
@@ -100,7 +101,9 @@ function drawChart() {
   var temperature_read_duct_min = (fields[4]);
   var temperature_read_laser_max = (fields[5]);
   var temperature_read_laser_min = (fields[6]);
+  var current_gate_state = (fields[7]);
 
+  document.getElementById("gate_state_div").innerText = "Gate state: "+current_gate_state;
   document.getElementById("timestamp_div").innerText = "Time stamp: "+time_stamp_from_laser;
   document.getElementById("duct_max_div").innerText = "Duct max Temperature: "+temperature_read_duct_max
   document.getElementById("duct_min_div").innerText = "Duct min Temperature: "+temperature_read_duct_min
