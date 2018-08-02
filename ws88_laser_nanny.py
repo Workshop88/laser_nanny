@@ -415,6 +415,8 @@ def parent():
     temperature_sensor_1 = ""
     temperature_sensor_2 = ""
 
+    first_run_after_bootup = True
+
     try:
         while True:
             #
@@ -443,7 +445,7 @@ def parent():
                     lasercutter_state = True
                     blast_gate_open()
                     datetime_last_start = dt.now()
-                    # Write on time stap to file.
+                    # Write on time stamp to file.
                     file = open('/home/pi/git/laser_nanny/laser_nanny.log','a')
                     file.write('on, '+str(datetime_last_start.strftime('%Y-%m-%d %H:%M:%S'))+'\n')
                     file.close()
@@ -462,6 +464,27 @@ def parent():
                     datetime_elasped_total = datetime_elasped_total + datetime_elasped_time
                     history_time.insert(0, datetime_elasped_time)
 ##                    print("LaserCutter is Off.")
+            if first_run_after_bootup:
+                if GPIO.input(17) == True:
+                    lasercutter_state = True
+                    blast_gate_open()
+                    datetime_last_start = dt.now()
+                    # Write on time stamp to file.
+                    file = open('/home/pi/git/laser_nanny/laser_nanny.log','a')
+                    file.write('on, '+str(datetime_last_start.strftime('%Y-%m-%d %H:%M:%S'))+'\n')
+                    file.close()
+                else:
+                    lasercutter_state = False
+                    blast_gate_close()
+                    datetime_last_end = dt.now()
+                    # Write off time stamp to file.
+                    file = open('/home/pi/git/laser_nanny/laser_nanny.log','a')
+                    file.write('off, '+str(datetime_last_end.strftime('%Y-%m-%d %H:%M:%S'))+'\n')
+                    file.close()
+                    # Add this interval to total and history.
+                    datetime_elasped_time = datetime_last_end - datetime_last_start
+                    datetime_elasped_total = datetime_elasped_total + datetime_elasped_time
+                    history_time.insert(0, datetime_elasped_time)
 
             #
             # Process key time out return to top menu here.
@@ -791,6 +814,7 @@ def parent():
             web_update = False
             log_update_1 = False
             log_update_2 = False
+            first_run_after_bootup = False
 
     # Catch a keyboard ctrl-c and exit cleanly by giving up the GPIO pins.
     except KeyboardInterrupt:
