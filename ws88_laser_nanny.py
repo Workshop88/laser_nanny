@@ -245,6 +245,7 @@ def parent():
     #
     # Initialize elapsed time to zero
     datetime_elasped_total = dt.strptime('00:00:00', '%H:%M:%S')
+    datetime_last_start = dt.strptime('00:00:00', '%H:%M:%S')
     file = open('/home/pi/git/laser_nanny/laser_nanny.log','r')
     # Go to end of file.
     file.seek(0,2)
