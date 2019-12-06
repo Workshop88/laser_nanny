@@ -243,6 +243,21 @@ def parent():
     #
     # Open time stamp file and read any history.
     #
+    # Because we read from these files to build the current history, these
+    # files must be populated.  If they are missing we need to create
+    # them for the code to succeed.
+    if os.path.exists('/home/pi/git/laser_nanny/laser_nanny.log') == 'false':
+        # Create file and populate with dummy entries.
+        file = open('/home/pi/git/laser_nanny/laser_nanny.log','w')
+        file.write('off, 2019-01-01 00:00:00\n')
+        file.close()
+    if os.path.exists('/home/pi/git/laser_nanny/laser_nanny_temperature.log') == 'false':
+        # Create file and populate with dummy entries.
+        file = open('/home/pi/git/laser_nanny/laser_nanny_temperature.log','w')
+        file.write('1,  60.000,2019-01-01 00:00:00\n')
+        file.write('2,  60.000,2019-01-01 00:00:00\n')
+        file.close()
+    #
     # Initialize elapsed time to zero
     datetime_elasped_total = dt.strptime('00:00:00', '%H:%M:%S')
     datetime_last_start = dt.strptime('00:00:00', '%H:%M:%S')
