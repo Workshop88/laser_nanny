@@ -246,12 +246,12 @@ def parent():
     # Because we read from these files to build the current history, these
     # files must be populated.  If they are missing we need to create
     # them for the code to succeed.
-    if os.path.exists('/home/pi/git/laser_nanny/laser_nanny.log') == 'false':
+    if os.path.exists('/home/pi/git/laser_nanny/laser_nanny.log') == False:
         # Create file and populate with dummy entries.
         file = open('/home/pi/git/laser_nanny/laser_nanny.log','w')
         file.write('off, 2019-01-01 00:00:00\n')
         file.close()
-    if os.path.exists('/home/pi/git/laser_nanny/laser_nanny_temperature.log') == 'false':
+    if os.path.exists('/home/pi/git/laser_nanny/laser_nanny_temperature.log') == False:
         # Create file and populate with dummy entries.
         file = open('/home/pi/git/laser_nanny/laser_nanny_temperature.log','w')
         file.write('1,  60.000,2019-01-01 00:00:00\n')
