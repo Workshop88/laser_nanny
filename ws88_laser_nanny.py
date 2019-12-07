@@ -704,7 +704,7 @@ def parent():
             if (web_update) or (temperature_sensor_1_change) or (temperature_sensor_2_change):
                 # We are updating the web information so reset the back off timer.
                 seconds_interval_web = seconds + datetime.timedelta(seconds = 300)
-                data_string = 'temperature_sensor_1+','+temperature_sensor_2+','+time_string+','+str(temperature_sensor_1_max_all_time)+','+str(temperature_sensor_1_min_all_time)+','+str(temperature_sensor_2_max_all_time)+','+str(temperature_sensor_2_min_all_time)+','+str(lasercutter_state)'
+                data_string = temperature_sensor_1+','+temperature_sensor_2+','+time_string+','+str(temperature_sensor_1_max_all_time)+','+str(temperature_sensor_1_min_all_time)+','+str(temperature_sensor_2_max_all_time)+','+str(temperature_sensor_2_min_all_time)+','+str(lasercutter_state)
                 data = urllib.urlencode({'feed_name':data_string})
                 full_url = url + '?' + data
 ##                print("url:", full_url)
