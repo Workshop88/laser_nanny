@@ -42,6 +42,10 @@ from socket import error as socket_error
 from enum import Enum
 from datetime import datetime as dt
 
+from slacker import Slacker
+try: execfile("do_not_scc_this_file.py")
+except IOError: print("Missing do_not_scc_this_file.py.\n")
+
 screen_lcd = Enum('screen_lcd', 'info menu status settings about')
 
 # Setup for BCM pin numbering.
@@ -398,6 +402,7 @@ def parent():
     log_update_2 = False
     lasercutter_state = False
     blast_gate_state_open = False
+    log_update_slack = False
 
     global time_on_report_function_flag
     time_on_report_function_flag = True
@@ -408,6 +413,7 @@ def parent():
     seconds = dt.now()
     seconds_interval_web = seconds + datetime.timedelta(seconds = 10)
     seconds_interval_log = seconds + datetime.timedelta(seconds = 10)
+    seconds_interval_slack = seconds + datetime.timedelta(seconds = 10)
 
     seconds_interval_lcd_menu_timeout = seconds + datetime.timedelta(seconds = 60)
 
@@ -452,6 +458,10 @@ def parent():
                 seconds_interval_log = seconds + datetime.timedelta(seconds = 300)
                 log_update_1 = True
                 log_update_2 = True
+            # Manage the time interval between slack updates.
+            if seconds > seconds_interval_slack:
+                seconds_interval_slack = seconds + datetime.timedelta(seconds = 3600)
+                log_update_slack = True
 
             #
             # Process LaserCutter power On/Off here.
@@ -668,6 +678,25 @@ def parent():
                     # Write temperature from probe 2.
                     file.write('2, '+temperature_sensor_2+','+str(dt.now().strftime('%Y-%m-%d %H:%M:%S'))+'\n')
                 file.close()
+            #
+            # Publish temperature data on slack.
+            #
+            # Make sure channel (and likely slack as well) are defined.
+            try: channel
+            except NameError: print("Missing slack credentials.\n")
+            else: 
+                if (log_update_slack) and ((temperature_sensor_1 < 40) or (temperature_sensor_2 < 40)):
+                    # We are updating slack so reset the back off timer.
+                    seconds_interval_slack = seconds + datetime.timedelta(seconds = 3600)
+                    # Send freeze warning to slack.
+                    temp_slack_string = "FREEZE WARNING!!!\n"
+                    slack.chat.post_message(channel, temp_slack_string)
+                    temp_slack_string = "(Autonomous message from Laser Nanny.)\n"
+                    slack.chat.post_message(channel, temp_slack_string)
+                    temp_slack_string = "Temperature near laser: %s F  Date Time: %s\n"%(temperature_sensor_1, str(dt.now().strftime('%Y-%m-%d %H:%M:%S')))
+                    slack.chat.post_message(channel, temp_slack_string)
+                    temp_slack_string = "Temperature behind blast gate: %s F  Date Time: %s\n"%(temperature_sensor_2, str(dt.now().strftime('%Y-%m-%d %H:%M:%S')))
+                    slack.chat.post_message(channel, temp_slack_string)
 
             #
             #  Manage reporting temperature on web page.
@@ -675,7 +704,7 @@ def parent():
             if (web_update) or (temperature_sensor_1_change) or (temperature_sensor_2_change):
                 # We are updating the web information so reset the back off timer.
                 seconds_interval_web = seconds + datetime.timedelta(seconds = 300)
-                data_string = temperature_sensor_1+','+temperature_sensor_2+','+time_string+','+str(temperature_sensor_1_max_all_time)+','+str(temperature_sensor_1_min_all_time)+','+str(temperature_sensor_2_max_all_time)+','+str(temperature_sensor_2_min_all_time)+','+str(lasercutter_state)
+                data_string = 'temperature_sensor_1+','+temperature_sensor_2+','+time_string+','+str(temperature_sensor_1_max_all_time)+','+str(temperature_sensor_1_min_all_time)+','+str(temperature_sensor_2_max_all_time)+','+str(temperature_sensor_2_min_all_time)+','+str(lasercutter_state)'
                 data = urllib.urlencode({'feed_name':data_string})
                 full_url = url + '?' + data
 ##                print("url:", full_url)
@@ -830,6 +859,7 @@ def parent():
             web_update = False
             log_update_1 = False
             log_update_2 = False
+            log_update_slack = False
             first_run_after_bootup = False
 
     # Catch a keyboard ctrl-c and exit cleanly by giving up the GPIO pins.
