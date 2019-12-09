@@ -46,6 +46,22 @@ from slacker import Slacker
 try: execfile("do_not_scc_this_file.py")
 except IOError: print("Missing do_not_scc_this_file.py.\n")
 
+#
+# Setup to publish temperature data to MQTT broker.
+#
+###from paho.mqtt.client import Client
+import paho.mqtt.client as paho
+broker="192.168.2.179"
+port=1883
+###def on_publish(client,userdata,result):             #create function for callback
+###    print("data published \n")
+###    pass
+# Create client object.
+client1 = paho.Client("control1")
+###client1.on_publish = on_publish                          #assign function to callback
+# Establish connection.
+client1.connect(broker, port)
+
 screen_lcd = Enum('screen_lcd', 'info menu status settings about')
 
 # Setup for BCM pin numbering.
@@ -475,6 +491,7 @@ def parent():
                     file = open('/home/pi/git/laser_nanny/laser_nanny.log','a')
                     file.write('on, '+str(datetime_last_start.strftime('%Y-%m-%d %H:%M:%S'))+'\n')
                     file.close()
+                    ret = client1.publish("w88_shop_devices/feeds/laser-nanny-state", "on")
 ##                    print("LaserCutter is On.")
             else:
                 if lasercutter_state == True:
@@ -485,6 +502,7 @@ def parent():
                     file = open('/home/pi/git/laser_nanny/laser_nanny.log','a')
                     file.write('off, '+str(datetime_last_end.strftime('%Y-%m-%d %H:%M:%S'))+'\n')
                     file.close()
+                    ret = client1.publish("w88_shop_devices/feeds/laser-nanny-state", "off")
                     # Add this interval to total and history.
                     datetime_elasped_time = datetime_last_end - datetime_last_start
                     datetime_elasped_total = datetime_elasped_total + datetime_elasped_time
@@ -674,9 +692,13 @@ def parent():
                 if (log_update_1) or (temperature_sensor_1_change == True):
                     # Write temperature from probe 1.
                     file.write('1, '+temperature_sensor_1+','+str(dt.now().strftime('%Y-%m-%d %H:%M:%S'))+'\n')
+                    # Also send data to MQTT broker.
+                    ret = client1.publish("w88_shop_devices/feeds/laser-nanny-temp-blastgate", temperature_sensor_1)
                 if (log_update_2) or (temperature_sensor_2_change == True):
                     # Write temperature from probe 2.
                     file.write('2, '+temperature_sensor_2+','+str(dt.now().strftime('%Y-%m-%d %H:%M:%S'))+'\n')
+                    # Also send data to MQTT broker.
+                    ret = client1.publish("w88_shop_devices/feeds/laser-nanny-temp-laser", temperature_sensor_2)
                 file.close()
             #
             # Publish temperature data on slack.
@@ -685,6 +707,7 @@ def parent():
             try: channel
             except NameError: print("Missing slack credentials.\n")
             else: 
+                # Only publish when we are close to freezing temperatures.
                 if (log_update_slack) and ((temperature_sensor_1 < 40) or (temperature_sensor_2 < 40)):
                     # We are updating slack so reset the back off timer.
                     seconds_interval_slack = seconds + datetime.timedelta(seconds = 3600)
