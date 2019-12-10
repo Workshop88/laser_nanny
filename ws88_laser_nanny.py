@@ -59,8 +59,6 @@ port=1883
 # Create client object.
 client1 = paho.Client("control1")
 ###client1.on_publish = on_publish                          #assign function to callback
-# Establish connection.
-client1.connect(broker, port)
 
 screen_lcd = Enum('screen_lcd', 'info menu status settings about')
 
@@ -693,12 +691,16 @@ def parent():
                     # Write temperature from probe 1.
                     file.write('1, '+temperature_sensor_1+','+str(dt.now().strftime('%Y-%m-%d %H:%M:%S'))+'\n')
                     # Also send data to MQTT broker.
+                    client1.connect(broker, port)
                     ret = client1.publish("w88_shop_devices/feeds/laser-nanny-temp-blastgate", temperature_sensor_1)
+                    client1.disconnect()
                 if (log_update_2) or (temperature_sensor_2_change == True):
                     # Write temperature from probe 2.
                     file.write('2, '+temperature_sensor_2+','+str(dt.now().strftime('%Y-%m-%d %H:%M:%S'))+'\n')
                     # Also send data to MQTT broker.
+                    client1.connect(broker, port)
                     ret = client1.publish("w88_shop_devices/feeds/laser-nanny-temp-laser", temperature_sensor_2)
+                    client1.disconnect()
                 file.close()
             #
             # Publish temperature data on slack.
