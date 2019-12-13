@@ -489,7 +489,9 @@ def parent():
                     file = open('/home/pi/git/laser_nanny/laser_nanny.log','a')
                     file.write('on, '+str(datetime_last_start.strftime('%Y-%m-%d %H:%M:%S'))+'\n')
                     file.close()
+                    client1.connect(broker, port)
                     ret = client1.publish("w88_shop_devices/feeds/laser-nanny-state", "on")
+                    client1.disconnect()
 ##                    print("LaserCutter is On.")
             else:
                 if lasercutter_state == True:
@@ -500,7 +502,9 @@ def parent():
                     file = open('/home/pi/git/laser_nanny/laser_nanny.log','a')
                     file.write('off, '+str(datetime_last_end.strftime('%Y-%m-%d %H:%M:%S'))+'\n')
                     file.close()
+                    client1.connect(broker, port)
                     ret = client1.publish("w88_shop_devices/feeds/laser-nanny-state", "off")
+                    client1.disconnect()
                     # Add this interval to total and history.
                     datetime_elasped_time = datetime_last_end - datetime_last_start
                     datetime_elasped_total = datetime_elasped_total + datetime_elasped_time
