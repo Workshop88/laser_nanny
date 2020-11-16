@@ -51,7 +51,9 @@ except IOError: print("Missing do_not_scc_this_file.py.\n")
 #
 ###from paho.mqtt.client import Client
 import paho.mqtt.client as paho
-broker="192.168.2.179"
+### old id address ### broker="192.168.2.179"
+broker="192.168.2.171"
+### broker="lasernanny.hsd1.il.comcast.net"
 port=1883
 ###def on_publish(client,userdata,result):             #create function for callback
 ###    print("data published \n")
@@ -149,7 +151,7 @@ def child():
             if serr.errno == errno.EPIPE:
                 # Exit the child as the parent likely had terminated.
                 os._exit(0)
-### debug print ###        print(temperature_in_fahrenheit)
+### debug print ###        print("1:",temperature_in_fahrenheit)
 
         temperature_in_fahrenheit = sensor_list[1].get_temperature(W1ThermSensor.DEGREES_F)
         string_temp = "2, " + str(temperature_in_fahrenheit)
@@ -160,7 +162,7 @@ def child():
             if serr.errno == errno.EPIPE:
                 # Exit the child as the parent likely has terminated.
                 os._exit(0)
-### debug print ###        print(temperature_in_fahrenheit)
+### debug print ###        print("2:",temperature_in_fahrenheit)
 
 #
 # Parent program routine.
@@ -492,7 +494,7 @@ def parent():
                     client1.connect(broker, port)
                     ret = client1.publish("w88_shop_devices/feeds/laser-nanny-state", "on")
                     client1.disconnect()
-##                    print("LaserCutter is On.")
+                    print("LaserCutter is On.") ###
             else:
                 if lasercutter_state == True:
                     lasercutter_state = False
@@ -509,7 +511,7 @@ def parent():
                     datetime_elasped_time = datetime_last_end - datetime_last_start
                     datetime_elasped_total = datetime_elasped_total + datetime_elasped_time
                     history_time.insert(0, datetime_elasped_time)
-##                    print("LaserCutter is Off.")
+                    print("LaserCutter is Off.") ###
             if first_run_after_bootup:
                 if GPIO.input(17) == True:
                     lasercutter_state = True
@@ -519,6 +521,10 @@ def parent():
                     file = open('/home/pi/git/laser_nanny/laser_nanny.log','a')
                     file.write('on, '+str(datetime_last_start.strftime('%Y-%m-%d %H:%M:%S'))+'\n')
                     file.close()
+                    client1.connect(broker, port)
+                    ret = client1.publish("w88_shop_devices/feeds/laser-nanny-state", "on")
+                    client1.disconnect()
+                    print("LaserCutter found On.") ###
                 else:
                     lasercutter_state = False
                     blast_gate_close()
@@ -527,10 +533,14 @@ def parent():
                     file = open('/home/pi/git/laser_nanny/laser_nanny.log','a')
                     file.write('off, '+str(datetime_last_end.strftime('%Y-%m-%d %H:%M:%S'))+'\n')
                     file.close()
+                    client1.connect(broker, port)
+                    ret = client1.publish("w88_shop_devices/feeds/laser-nanny-state", "off")
+                    client1.disconnect()
                     # Add this interval to total and history.
                     datetime_elasped_time = datetime_last_end - datetime_last_start
                     datetime_elasped_total = datetime_elasped_total + datetime_elasped_time
                     history_time.insert(0, datetime_elasped_time)
+                    print("LaserCutter found Off.") ###
 
             #
             # Process key time out return to top menu here.
