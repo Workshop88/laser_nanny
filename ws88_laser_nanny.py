@@ -52,8 +52,9 @@ except IOError: print("Missing do_not_scc_this_file.py.\n")
 ###from paho.mqtt.client import Client
 import paho.mqtt.client as paho
 ### old id address ### broker="192.168.2.179"
-broker="192.168.2.171"
+### broker="192.168.2.171"
 ### broker="lasernanny.hsd1.il.comcast.net"
+broker="127.0.0.1"
 port=1883
 ###def on_publish(client,userdata,result):             #create function for callback
 ###    print("data published \n")
