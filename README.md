@@ -1,5 +1,7 @@
 # laser_nanny
 
+2023.02.12
+
 Raspberry Pi Python program to monitor laser cutter 
  
 Objectives: 1) To control the blast gate in line with the laser cutter exhaust vent. 2) To monitor the temperatures in the vent and in the case of the laser cutter. 3) To monitor the use of the laser cutter. 
